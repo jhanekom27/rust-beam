@@ -62,41 +62,45 @@ async fn receive_file(address: &str) -> io::Result<()> {
 }
 
 async fn relay() -> io::Result<()> {
-    let (tx, mut rx) = mpsc::channel(1);
     let sender_listener = TcpListener::bind("0.0.0.0:7878").await?;
     let receiver_listener = TcpListener::bind("0.0.0.0:7879").await?;
-
     println!("Relay server running");
 
-    tokio::spawn(async move {
-        while let Ok((sender_conn, _)) = sender_listener.accept().await {
-            let tx = tx.clone();
-            tokio::spawn(async move {
-                tx.send(sender_conn)
-                    .await
-                    .expect("Failed to send sender connection");
-            });
-        }
-    });
+    loop {
+        // Wait for the sender to connect
+        let (mut sender_conn, _) = match sender_listener.accept().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                eprintln!("Error accepting sender connection: {}", e);
+                continue;
+            }
+        };
+        println!("Sender connected");
 
-    while let Ok((mut receiver_conn, _)) = receiver_listener.accept().await {
-        if let Some(sender_conn) = rx.recv().await {
-            let (mut sender_read, mut sender_write) = sender_conn.into_split();
-            let (mut receiver_read, mut receiver_write) = receiver_conn.into_split();
+        // Wait for the receiver to connect
+        let (mut receiver_conn, _) = match receiver_listener.accept().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                eprintln!("Error accepting receiver connection: {}", e);
+                continue;
+            }
+        };
+        println!("Receiver connected");
 
-            tokio::spawn(async move {
-                io::copy(&mut sender_read, &mut receiver_write)
-                    .await
-                    .expect("Failed to relay data from sender to receiver");
-            });
+        // Relay data from sender to receiver
+        let sender_to_receiver = tokio::spawn(async move {
+            let mut buffer = [0; 1024];
+            loop {
+                let n = match sender_conn.read(&mut buffer).await {
+                    Ok(n) if n == 0 => return io::Result::Ok(()),
+                    Ok(n) => n,
+                    Err(e) => return Err(e),
+                };
+                receiver_conn.write_all(&buffer[..n]).await?;
+            }
+        });
 
-            tokio::spawn(async move {
-                io::copy(&mut receiver_read, &mut sender_write)
-                    .await
-                    .expect("Failed to relay data from receiver to sender");
-            });
-        }
+        // Wait for the relaying task to finish
+        let _ = sender_to_receiver.await;
     }
-
-    Ok(())
 }

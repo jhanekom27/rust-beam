@@ -1,9 +1,15 @@
 // use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 // use tokio::net::{TcpListener, TcpStream};
 
-use std::io;
+use std::{collections::HashMap, io, sync::Arc};
 
 use clap::{Args, Parser, Subcommand};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+    select,
+    sync::Mutex,
+};
 use uuid::Uuid;
 
 #[derive(Debug, Parser)]
@@ -30,114 +36,127 @@ struct ReceiveArgs {
     uuid: Uuid,
 }
 
+#[derive(Debug)]
+struct State {
+    sessions: Mutex<HashMap<Uuid, Session>>,
+}
+
+#[derive(Debug)]
+struct Session {
+    sender_connection: Arc<Mutex<TcpStream>>,
+}
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let args = Cli::parse();
     println!("{:?}", args);
 
+    let state = Arc::new(State {
+        sessions: Mutex::new(HashMap::new()),
+    });
+
+    match args.commands {
+        Commands::Send(send_args) => {
+            send_file(&send_args.file_path).await?;
+        }
+        Commands::Receive(receive_args) => {
+            receive_file(receive_args.uuid).await?;
+        }
+        Commands::Relay => {
+            relay(state.clone()).await?;
+        }
+    }
+
     println!("Success");
     Ok(())
 }
 
-// #[tokio::main]
-// async fn main() -> io::Result<()> {
-//     let args: Vec<String> = std::env::args().collect();
-//     if args.len() < 2 {
-//         println!("Usage: [send|receive|relay] [FILE_PATH|ADDRESS:PORT]");
-//         return Ok(());
-//     }
+async fn send_file(file_path: &str) -> io::Result<()> {
+    println!("Sending file: {}", file_path);
+    let mut file = tokio::fs::File::open(file_path).await?;
+    let mut buffer = [0; 1024];
+    let mut connection = TcpStream::connect("0.0.0.0:7878").await?;
 
-//     match args[1].as_str() {
-//         "send" if args.len() == 3 => {
-//             let filepath = &args[2];
-//             send_file(filepath).await?;
-//         }
-//         "receive" if args.len() == 2 => {
-//             // let address = &args[2];
-//             // println!("Address: {address}");
-//             receive_file("127.0.0.1:7879").await?;
-//         }
-//         "relay" => {
-//             relay().await?;
-//         }
-//         _ => println!("Invalid usage"),
-//     }
+    while let Ok(n) = file.read(&mut buffer).await {
+        if n == 0 {
+            break;
+        }
+        connection.write_all(&buffer[..n]).await?;
+    }
+    Ok(())
+}
 
-//     Ok(())
-// }
+async fn receive_file(uuid: Uuid) -> io::Result<()> {
+    println!("Receiving file with UUID: {}", uuid);
+    let mut file = tokio::fs::File::create(uuid.to_string()).await?;
+    let mut buffer = [0; 1024];
+    let mut connection = TcpStream::connect("0.0.0.0:7879").await?;
 
-// async fn send_file(ilepath: &str) -> io::Result<()> {
-//     let mut file = tokio::fs::File::open(ilepath).await?;
-//     let mut buffer = [0; 1024];
-//     let mut connection = TcpStream::connect("127.0.0.1:7878").await?;
+    connection.write_all(uuid.as_bytes()).await?;
 
-//     while let Ok(n) = file.read(&mut buffer).await {
-//         if n == 0 {
-//             break;
-//         }
-//         connection.write_all(&buffer[..n]).await?;
-//     }
+    while let Ok(n) = connection.read(&mut buffer).await {
+        if n == 0 {
+            break;
+        }
+        file.write_all(&buffer[..n]).await?;
+    }
 
-//     println!("File sent successfully");
-//     Ok(())
-// }
+    println!("File received successfully");
 
-// async fn receive_file(address: &str) -> io::Result<()> {
-//     let mut connection = TcpStream::connect(address).await?;
-//     let mut file = tokio::fs::File::create("received_file").await?;
-//     let mut buffer = [0; 1024];
+    Ok(())
+}
 
-//     while let Ok(n) = connection.read(&mut buffer).await {
-//         if n == 0 {
-//             break;
-//         }
-//         file.write_all(&buffer[..n]).await?;
-//     }
+async fn relay(state: Arc<State>) -> io::Result<()> {
+    println!("Relaying data");
+    println!("{:?}", state);
 
-//     println!("File received successfully");
-//     Ok(())
-// }
+    // Create sender and reciver listener as tcpListener
+    let sender_listener = TcpListener::bind("0.0.0.0:7878").await?;
+    let receiver_listener = TcpListener::bind("0.0.0.0:7879").await?;
 
-// async fn relay() -> io::Result<()> {
-//     let sender_listener = TcpListener::bind("0.0.0.0:7878").await?;
-//     let receiver_listener = TcpListener::bind("0.0.0.0:7879").await?;
-//     println!("Relay server running");
+    loop {
+        select! {
+            // Get the sender connection and add to state
+            sender = sender_listener.accept() => {
+                let (sender_conn, _) = sender?;
+                let uuid = Uuid::new_v4();
+                println!("{:?}", uuid);
+                state.sessions.lock().await.insert(
+                    uuid,
+                    Session {
+                        sender_connection: Arc::new(Mutex::new(sender_conn)),
+                    },
+                );
+                println!("{:?}", state);
+            }
+            // Get the receiver connection
+            receiver = receiver_listener.accept() => {
+                let (mut receiver_conn, _) = receiver?;
+                let uuid_buf = &mut [0; 16];
+                receiver_conn.read(uuid_buf).await?;
+                let receiver_uuid = Uuid::from_bytes(*uuid_buf);
+                println!("{:?}", receiver_uuid);
 
-//     loop {
-//         // Wait for the sender to connect
-//         let (mut sender_conn, _) = match sender_listener.accept().await {
-//             Ok(conn) => conn,
-//             Err(e) => {
-//                 eprintln!("Error accepting sender connection: {}", e);
-//                 continue;
-//             }
-//         };
-//         println!("Sender connected");
+                let sender_conn = state.sessions.lock().await.get(&receiver_uuid).unwrap().sender_connection.clone();
 
-//         // Wait for the receiver to connect
-//         let (mut receiver_conn, _) = match receiver_listener.accept().await {
-//             Ok(conn) => conn,
-//             Err(e) => {
-//                 eprintln!("Error accepting receiver connection: {}", e);
-//                 continue;
-//             }
-//         };
-//         println!("Receiver connected");
 
-//         // Relay data from sender to receiver
-//         let sender_to_receiver = tokio::spawn(async move {
-//             let mut buffer = [0; 1024];
-//             loop {
-//                 let n = match sender_conn.read(&mut buffer).await {
-//                     Ok(n) if n == 0 => return io::Result::Ok(()),
-//                     Ok(n) => n,
-//                     Err(e) => return Err(e),
-//                 };
-//                 receiver_conn.write_all(&buffer[..n]).await?;
-//             }
-//         });
+                let sender_to_receiver = tokio::spawn(async move {
+                    let mut buffer = [0; 1024];
+                    let mut sender_conn_guard = sender_conn.lock().await;
 
-//         // Wait for the relaying task to finish
-//         let _ = sender_to_receiver.await;
-//     }
-// }
+                    loop {
+                        let n = match sender_conn_guard.read(&mut buffer).await {
+                            Ok(n) if n == 0 => return io::Result::Ok(()),
+                            Ok(n) => n,
+                            Err(e) => return Err(e),
+                        };
+                        receiver_conn.write_all(&buffer[..n]).await?;
+                    }
+
+                });
+
+                let _ = sender_to_receiver.await;
+            }
+        }
+    }
+}

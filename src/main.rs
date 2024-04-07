@@ -3,8 +3,38 @@
 
 use std::io;
 
+use clap::{Args, Parser, Subcommand};
+use uuid::Uuid;
+
+#[derive(Debug, Parser)]
+struct Cli {
+    #[command(subcommand)]
+    commands: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    Send(SendArgs),
+    Receive(ReceiveArgs),
+    Relay,
+}
+
+#[derive(Debug, Args)]
+struct SendArgs {
+    #[clap(short, long)]
+    file_path: String,
+}
+
+#[derive(Debug, Args)]
+struct ReceiveArgs {
+    uuid: Uuid,
+}
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    let args = Cli::parse();
+    println!("{:?}", args);
+
     println!("Success");
     Ok(())
 }

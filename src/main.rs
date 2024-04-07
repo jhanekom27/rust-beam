@@ -77,6 +77,12 @@ async fn send_file(file_path: &str) -> io::Result<()> {
     let mut buffer = [0; 1024];
     let mut connection = TcpStream::connect("0.0.0.0:7878").await?;
 
+    let uuid_buf = &mut [0; 16];
+    connection.read(uuid_buf).await?;
+    let relay_uuid = Uuid::from_bytes(*uuid_buf);
+
+    println!("{:?}", relay_uuid);
+
     while let Ok(n) = file.read(&mut buffer).await {
         if n == 0 {
             break;
@@ -118,9 +124,13 @@ async fn relay(state: Arc<State>) -> io::Result<()> {
         select! {
             // Get the sender connection and add to state
             sender = sender_listener.accept() => {
-                let (sender_conn, _) = sender?;
+                let (mut sender_conn, _) = sender?;
                 let uuid = Uuid::new_v4();
                 println!("{:?}", uuid);
+
+                sender_conn.write_all(uuid.as_bytes()).await?;
+
+
                 state.sessions.lock().await.insert(
                     uuid,
                     Session {

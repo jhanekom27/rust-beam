@@ -137,7 +137,14 @@ async fn relay(state: Arc<State>) -> io::Result<()> {
                 let receiver_uuid = Uuid::from_bytes(*uuid_buf);
                 println!("{:?}", receiver_uuid);
 
-                let sender_conn = state.sessions.lock().await.get(&receiver_uuid).unwrap().sender_connection.clone();
+
+                let sender_conn = match state.sessions.lock().await.get(&receiver_uuid) {
+                    Some(session) => session.sender_connection.clone(),
+                    None => {
+                        println!("No sender connection found for receiver");
+                        continue
+                    },
+                };
 
 
                 let sender_to_receiver = tokio::spawn(async move {
@@ -156,6 +163,9 @@ async fn relay(state: Arc<State>) -> io::Result<()> {
                 });
 
                 let _ = sender_to_receiver.await;
+
+                // Remove the stored session
+                state.sessions.lock().await.remove(&receiver_uuid);
             }
         }
     }

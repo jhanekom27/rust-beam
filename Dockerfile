@@ -1,5 +1,10 @@
+# Default platform is linux/amd64
+# ARG PLATFORM=linux/amd64
+ARG BUILDPLATFORM=linux/amd64
+ARG TARGETPLATFORM=linux/amd64
+
 # Use the official Rust image as the build environment
-FROM rust:latest AS builder
+FROM --platform=$BUILDPLATFORM rust:latest AS builder
 
 # Install necessary dependencies for building Rust projects
 RUN apt-get update && apt-get install -y \
@@ -21,7 +26,7 @@ COPY src ./src
 RUN cargo build --release
 
 # Use a minimal base image for the final stage
-FROM rust:latest
+FROM --platform=$TARGETPLATFORM rust:latest
 
 # Install necessary runtime dependencies
 RUN apt-get update && apt-get install -y \

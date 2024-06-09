@@ -1,0 +1,85 @@
+version: '3'
+
+env:
+  DROPLET_NAME: rust-beam-droplet
+  IMAGE: docker-18-04
+  SIZE: s-1vcpu-1gb
+  REGION: syd1
+  CONTAINER_NAME: rust-beam
+  DOCKER_IMAGE: registry.digitalocean.com/cube-registry/rust-beam:latest
+
+dotenv:
+  - .env
+
+tasks:
+  create-droplet:
+    cmds:
+      - |
+        doctl compute droplet create $DROPLET_NAME \
+          --size $SIZE \
+          --image $IMAGE \
+          --region $REGION \
+          --ssh-keys $SSH_KEY_ID \
+          --wait \
+          --user-data '#!/bin/bash
+        apt-get update
+        apt-get install -y docker.io
+        systemctl start docker
+        systemctl enable docker
+        snap install doctl
+        mkdir -p /root/.config /root/.docker
+        doctl auth init -t $DO_API_KEY
+        sudo usermod -aG docker $USER
+        sudo snap connect doctl:dot-docker
+        doctl registry login
+        docker run -d \
+          -p 7878:7878 \
+          -p 7879:7879 \
+          --name $CONTAINER_NAME \
+          --privileged \
+          $DOCKER_IMAGE \
+          rust-beam relay'
+    status:
+    # Only run if the droplet doesn't already exist
+    - doctl compute droplet list --format Name --no-header | grep "^$DROPLET_NAME$"
+  
+  delete-droplet:
+    cmds:
+    - doctl compute droplet delete rust-beam-droplet -f
+    preconditions:
+    # Only run if the droplet exists
+    - doctl compute droplet list --format Name --no-header | grep "^$DROPLET_NAME$"
+
+  build-and-push-container:
+    cmds:
+    - doctl registry login
+    - |
+      docker buildx build --platform linux/amd64,linux/arm64 \
+      -t registry.digitalocean.com/cube-registry/rust-beam:latest \
+      --push .
+
+  update-container:
+    cmds:
+    - |
+      ssh root@{{.DROPLET_IP}} -i ~/.ssh/lift_lab_droplet << EOF
+      doctl auth init -t $DO_API_KEY
+      doctl registry login
+      docker pull $DOCKER_IMAGE
+      docker stop $CONTAINER_NAME
+      docker rm $CONTAINER_NAME
+      docker run -d -p 7878:7878 -p 7879:7879 --name $CONTAINER_NAME --privileged $DOCKER_IMAGE rust-beam relay
+      EOF
+    vars:
+      DROPLET_IP:
+        sh: doctl compute droplet list --format Name,PublicIPv4 --no-header | grep {{.DROPLET_NAME}} | awk '{print $2}'
+
+  build-and-update:
+    deps:
+    - build-and-push-container
+    - update-container
+
+  build-container:
+    cmds:
+    - docker build -t rust-beam .
+    - docker tag rust-beam registry.digitalocean.com/cube-registry/rust-beam:latest
+    - docker push registry.digitalocean.com/cube-registry/rust-beam:latest

@@ -80,6 +80,6 @@ tasks:
 
   build-container:
     cmds:
-    - docker build -t rust-beam .
-    - docker tag rust-beam registry.digitalocean.com/cube-registry/rust-beam:latest
-    - docker push registry.digitalocean.com/cube-registry/rust-beam:latest
+    - docker build --build-arg BUILDPLATFORM=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t rust-beam .
+    # - docker tag rust-beam registry.digitalocean.com/cube-registry/rust-beam:latest
+    # - docker push registry.digitalocean.com/cube-registry/rust-beam:latest

@@ -36,8 +36,5 @@ RUN apt-get update && apt-get install -y \
 # Copy the compiled binary from the build stage
 COPY --from=builder /app/target/release/rust-beam /usr/local/bin/rust-beam
 
-# Expose the port that your application will run on
-EXPOSE 2345
-
 # Set the startup command to run your binary
 CMD ["rust-beam", "relay"]

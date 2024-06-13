@@ -1,9 +1,8 @@
-// use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
-// use tokio::net::{TcpListener, TcpStream};
+mod cli;
 
 use std::{collections::HashMap, io, sync::Arc};
 
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -12,29 +11,7 @@ use tokio::{
 };
 use uuid::Uuid;
 
-#[derive(Debug, Parser)]
-struct Cli {
-    #[command(subcommand)]
-    commands: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
-    Send(SendArgs),
-    Receive(ReceiveArgs),
-    Relay,
-}
-
-#[derive(Debug, Args)]
-struct SendArgs {
-    #[clap(short, long)]
-    file_path: String,
-}
-
-#[derive(Debug, Args)]
-struct ReceiveArgs {
-    uuid: Uuid,
-}
+use cli::{Cli, Commands};
 
 #[derive(Debug)]
 struct State {
@@ -75,7 +52,7 @@ async fn send_file(file_path: &str) -> io::Result<()> {
     println!("Sending file: {}", file_path);
     let mut file = tokio::fs::File::open(file_path).await?;
     let mut buffer = [0; 1024];
-    let mut connection = TcpStream::connect("0.0.0.0:7878").await?;
+    let mut connection = TcpStream::connect("170.64.168.50:7878").await?;
 
     let uuid_buf = &mut [0; 16];
     connection.read(uuid_buf).await?;
@@ -96,7 +73,7 @@ async fn receive_file(uuid: Uuid) -> io::Result<()> {
     println!("Receiving file with UUID: {}", uuid);
     let mut file = tokio::fs::File::create(uuid.to_string()).await?;
     let mut buffer = [0; 1024];
-    let mut connection = TcpStream::connect("0.0.0.0:7879").await?;
+    let mut connection = TcpStream::connect("170.64.168.50:7879").await?;
 
     connection.write_all(uuid.as_bytes()).await?;
 

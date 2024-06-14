@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod config;
 
 use std::{collections::HashMap, io, sync::Arc};
 
@@ -11,6 +12,7 @@ use cli::{Cli, Commands};
 use commands::receive::receive_file;
 use commands::relay::relay;
 use commands::send::send_file;
+use config::get_config;
 
 #[derive(Debug)]
 struct State {
@@ -26,6 +28,8 @@ struct Session {
 async fn main() -> io::Result<()> {
     let args = Cli::parse();
     println!("{:?}", args);
+
+    let config = get_config();
 
     let state = Arc::new(State {
         sessions: Mutex::new(HashMap::new()),

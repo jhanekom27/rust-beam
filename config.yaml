@@ -1,0 +1,3 @@
+server_url: "170.64.168.50"
+send_port: "7878"
+receive_port: "7879"

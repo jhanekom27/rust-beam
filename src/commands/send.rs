@@ -6,11 +6,11 @@ use tokio::{
 };
 use uuid::Uuid;
 
-pub async fn send_file(file_path: &str) -> io::Result<()> {
+pub async fn send_file(file_path: &str, server_address: &str) -> io::Result<()> {
     println!("Sending file: {}", file_path);
     let mut file = tokio::fs::File::open(file_path).await?;
     let mut buffer = [0; 1024];
-    let mut connection = TcpStream::connect("170.64.168.50:7878").await?;
+    let mut connection = TcpStream::connect(server_address).await?;
 
     let uuid_buf = &mut [0; 16];
     connection.read(uuid_buf).await?;

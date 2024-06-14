@@ -9,7 +9,7 @@ use tokio::{net::TcpStream, sync::Mutex};
 use uuid::Uuid;
 
 use cli::{Cli, Commands};
-use commands::receive::receive_file;
+use commands::receive::{self, receive_file};
 use commands::relay::relay;
 use commands::send::send_file;
 use config::get_config;
@@ -30,6 +30,8 @@ async fn main() -> io::Result<()> {
     println!("{:?}", args);
 
     let config = get_config();
+    let send_server_address = format!("{}:{}", config.server_url, config.send_port);
+    let receive_server_address = format!("{}:{}", config.server_url, config.receive_port);
 
     let state = Arc::new(State {
         sessions: Mutex::new(HashMap::new()),
@@ -37,10 +39,10 @@ async fn main() -> io::Result<()> {
 
     match args.commands {
         Commands::Send(send_args) => {
-            send_file(&send_args.file_path).await?;
+            send_file(&send_args.file_path, &send_server_address).await?;
         }
         Commands::Receive(receive_args) => {
-            receive_file(receive_args.uuid).await?;
+            receive_file(receive_args.uuid, &receive_server_address).await?;
         }
         Commands::Relay => {
             relay(state.clone()).await?;

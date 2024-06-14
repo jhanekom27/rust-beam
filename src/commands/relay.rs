@@ -55,7 +55,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 };
 
 
-                let sender_to_receiver = tokio::spawn(async move {
+                tokio::spawn(async move {
                     let mut buffer = [0; 1024];
                     let mut sender_conn_guard = sender_conn.lock().await;
 
@@ -69,8 +69,6 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                     }
 
                 });
-
-                let _ = sender_to_receiver.await;
 
                 // Remove the stored session
                 state.sessions.lock().await.remove(&receiver_uuid);

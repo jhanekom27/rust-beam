@@ -12,7 +12,8 @@ pub struct Config {
 
 pub fn get_config() -> Config {
     let config_path = "config.yaml";
-    let config = read_config(config_path).expect("Failed to read configuration file.");
+    let config =
+        read_config(config_path).expect("Failed to read configuration file.");
     println!("Configuration loaded: {:?}", config);
     config
 }

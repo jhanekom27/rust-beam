@@ -30,8 +30,10 @@ async fn main() -> io::Result<()> {
     println!("{:?}", args);
 
     let config = get_config();
-    let send_server_address = format!("{}:{}", config.server_url, config.send_port);
-    let receive_server_address = format!("{}:{}", config.server_url, config.receive_port);
+    let send_server_address =
+        format!("{}:{}", config.server_url, config.send_port);
+    let receive_server_address =
+        format!("{}:{}", config.server_url, config.receive_port);
 
     let state = Arc::new(State {
         sessions: Mutex::new(HashMap::new()),

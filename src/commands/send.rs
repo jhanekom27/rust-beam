@@ -6,7 +6,10 @@ use tokio::{
 };
 use uuid::Uuid;
 
-pub async fn send_file(file_path: &str, server_address: &str) -> io::Result<()> {
+pub async fn send_file(
+    file_path: &str,
+    server_address: &str,
+) -> io::Result<()> {
     println!("Sending file: {}", file_path);
     let mut file = tokio::fs::File::open(file_path).await?;
     let mut buffer = [0; 1024];

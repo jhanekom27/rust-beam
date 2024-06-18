@@ -11,18 +11,20 @@ pub struct Config {
 }
 
 pub fn get_config() -> Config {
-    let config_path = "config.yaml";
-    let config =
-        read_config(config_path).expect("Failed to read configuration file.");
+    // let config_path = "config.yaml";
+    let config_yaml = include_str!("config.yaml");
+    let config: Config =
+        serde_yaml::from_str(config_yaml).expect("Failed to parse YAML");
+    // read_config(config_path).expect("Failed to read configuration file.");
     println!("Configuration loaded: {:?}", config);
     config
 }
 
-fn read_config(file_path: &str) -> Result<Config, serde_yaml::Error> {
-    let mut file = File::open(file_path).expect("Unable to open file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("Unable to read file");
-    let config: Config = serde_yaml::from_str(&contents)?;
-    Ok(config)
-}
+// fn read_config(file_path: &str) -> Result<Config, serde_yaml::Error> {
+//     let mut file = File::open(file_path).expect("Unable to open file");
+//     let mut contents = String::new();
+//     file.read_to_string(&mut contents)
+//         .expect("Unable to read file");
+//     let config: Config = serde_yaml::from_str(&contents)?;
+//     Ok(config)
+// }

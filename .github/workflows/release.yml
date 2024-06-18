@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.BINARY_NAME }}/${{ env.BINARY_NAME }}
+          asset_path: ./${{ env.BINARY_NAME }}
           asset_name: ${{ env.BINARY_NAME }}-${{ runner.os }}
           asset_content_type: application/octet-stream
 

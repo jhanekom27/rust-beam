@@ -54,6 +54,15 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+
+      - name: List files in the artifact directory
+        run: ls -l ${{ github.workspace }}
+
+      - name: List files in the artifact directory
+        run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}
+
+      - name: List files in the artifact directory
+        run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}-${{ runner.os }}
           
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1

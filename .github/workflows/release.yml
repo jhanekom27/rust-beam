@@ -34,7 +34,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.BINARY_NAME }}-${{ runner.os }}
+          name: ${{ env.BINARY_NAME }}-${{ runner.os }}.zip
           path: target/release/${{ env.BINARY_NAME }}
 
   release:
@@ -54,25 +54,13 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-
-      - name: List files in the artifact directory
-        run: ls -l ${{ github.workspace }}
-
-      - name: List files in the artifact directory
-        run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}
-
-      # - name: List files in the artifact directory
-        # run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}-${{ runner.os }}
-          
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}
-          asset_name: ${{ env.BINARY_NAME }}-${{ runner.os }}
-          asset_content_type: application/octet-stream
+      
+      - name: Upload Release Assets
+        run: |
+          for binary in ${{ env.BINARY_NAME }}-*.zip; do
+            echo "Uploading $binary"
+            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/octet-stream" --data-binary @"$binary" "${{ steps.create_release.outputs.upload_url }}?name=$(basename $binary)"
+          done
 
       # - name: Upload Release Asset
       #   uses: actions/upload-release-asset@v1
@@ -80,14 +68,6 @@ jobs:
       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   with:
       #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ./${{ runner.os }}-binary
+      #     asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}
       #     asset_name: ${{ env.BINARY_NAME }}-${{ runner.os }}
       #     asset_content_type: application/octet-stream
-
-
-
-
-
-          #   with:
-          # name: ${{ runner.os }}-binary
-          # path: target/release/${{ env.BINARY_NAME }}

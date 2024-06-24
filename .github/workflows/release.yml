@@ -12,13 +12,9 @@ env:
   BINARY_NAME: rust-beam
 
 jobs:
-  build:
-    name: Build and Release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
+  build-linux:
+    name: Build and Release for Linux
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Set up Rust
@@ -27,47 +23,71 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-
-      - name: Build binary
+      - name: Build release
         run: cargo build --release
-
+      - name: Package for homebrew
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz -C target/release ${{ env.BINARY_NAME }}
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.BINARY_NAME }}-${{ runner.os }}.zip
-          path: target/release/${{ env.BINARY_NAME }}
+          name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
+          path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
+  # build:
+  #   name: Build and Release
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest, windows-latest]
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Set up Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         profile: minimal
+  #         override: true
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+  #     - name: Build binary
+  #       run: cargo build --release
+
+  #     - name: Upload artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ env.BINARY_NAME }}-${{ runner.os }}.zip
+  #         path: target/release/${{ env.BINARY_NAME }}
+
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v3
+
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: actions/create-release@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         tag_name: ${{ github.ref }}
+  #         release_name: Release ${{ github.ref }}
+  #         draft: false
+  #         prerelease: false
       
-      - name: Upload Release Assets
-        run: |
-          for binary in ${{ env.BINARY_NAME }}-*.zip; do
-            echo "Uploading $binary"
-            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/octet-stream" --data-binary @"$binary" "${{ steps.create_release.outputs.upload_url }}?name=$(basename $binary)"
-          done
+  #     - name: Upload Release Assets
+  #       run: |
+  #         for binary in ${{ env.BINARY_NAME }}-*.zip; do
+  #           echo "Uploading $binary"
+  #           curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/octet-stream" --data-binary @"$binary" "${{ steps.create_release.outputs.upload_url }}?name=$(basename $binary)"
+  #         done
 
-      # - name: Upload Release Asset
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}
-      #     asset_name: ${{ env.BINARY_NAME }}-${{ runner.os }}
-      #     asset_content_type: application/octet-stream
+  #     # - name: Upload Release Asset
+  #     #   uses: actions/upload-release-asset@v1
+  #     #   env:
+  #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     #   with:
+  #     #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+  #     #     asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ runner.os }}/${{ env.BINARY_NAME }}
+  #     #     asset_name: ${{ env.BINARY_NAME }}-${{ runner.os }}
+  #     #     asset_content_type: application/octet-stream

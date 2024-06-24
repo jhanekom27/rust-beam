@@ -36,6 +36,7 @@ jobs:
   release:
     name: Release packages on Github
     runs-on: ubuntu-latest
+    needs: build-linux
     steps:
       - uses: actiions/checkout@v3
       - name: Download all artifacts

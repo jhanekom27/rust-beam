@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     name: Build package
-    runs-on: ${{ matrix,config.os }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
         config:

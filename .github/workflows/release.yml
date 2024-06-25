@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-    branches:
-      - build-windows
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
@@ -95,6 +93,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -104,6 +103,7 @@ jobs:
           asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
           asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
           asset_content_type: application/gzip
+
       - name: Upload MacOS Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -114,25 +114,8 @@ jobs:
           asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz
           asset_content_type: application/gzip
 
-      # List directory in workspace
-      - name: List directory
-        run: ls -l ${{ github.workspace }}
-      - name: List directory
-        run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-      # - name: List directory
-      #   run: ls -l ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe 
-
-      - uses: actions/upload-release-asset@v1
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

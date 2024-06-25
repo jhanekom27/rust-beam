@@ -40,7 +40,7 @@ jobs:
         run: cargo build --release
       - name: Package for homebrew
         if: matrix.config.os != 'windows-latest'
-        run: tar -czvf ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz -C target/release ${{ env.BINARY_NAME }}
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz -C target/release ${{ env.BINARY_NAME }}
 
       - name: Upload windows artifact
         if: matrix.config.platform == 'windows'
@@ -49,19 +49,13 @@ jobs:
           name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.exe
           path: target/release/${{ env.BINARY_NAME }}.exe
 
-      - name: Upload linux artifacts
-        if: matrix.config.platform == 'linux'
+      - name: Upload unix artifacts
+        if: matrix.config.platform != 'windows'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
           path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
 
-      - name: Upload macos artifacts
-        if: matrix.config.platform == 'macos'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
-          path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
 
   # build-linux:
   #   name: Build and Release for Linux

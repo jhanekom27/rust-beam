@@ -119,4 +119,27 @@ jobs:
       #     asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}.exe
       #     asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
       #     asset_content_type: application/octet-stream
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v3
+        with:
+          repository: jhanekom27/homebrew-${{ env.BINARY_NAME }}
+          path: homebrew-${{ env.BINARY_NAME }}
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Update homebrew formula
+        run: |
+          cd homebrew-${{ env.BINARY_NAME }}
+          ./update_formula.sh ${{ github.ref_name }} ${{ env.BINARY_NAME }}
+
+      - name: Commit and push changes
+        run: |
+          cd homebrew-${{ env.BINARY_NAME }}
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Update formula for version ${{ github.ref_name }}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
       

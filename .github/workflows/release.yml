@@ -151,7 +151,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Build Docker image
-        run: docker build -t ${{ env.BINARY_NAME }}:${{ github.ref_name}} .
+        run: docker build -t ${{ env.BINARY_NAME }}:latest .
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -162,8 +162,12 @@ jobs:
         run: doctl registry login --expiry-seconds 600
 
       - name: Tag image
-        run: docker tag ${{ env.BINARY_NAME }}:${{ github.ref_name}} registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+        run: \
+          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
+          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
 
       - name: Push image to DO Container Registry
-        run: docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+        run: \
+          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
       

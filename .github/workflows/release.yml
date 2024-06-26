@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - service deploy
+      - service-deploy
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 

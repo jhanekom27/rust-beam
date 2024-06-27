@@ -189,7 +189,7 @@ jobs:
       # Add your other steps here
       - name: Run a script
         run: |
-          ssh root@${{ secrets.DROPLET_IP }} -i ~/.ssh/id_rsa << EOF
+          ssh root@${{ secrets.DROPLET_IP }} -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa << EOF
           doctl auth init -t ${{ secrets.DO_TOKEN }}
           doctl registry login
           docker pull registry.digitalocean.com/cube-registry/rust-beam:latest

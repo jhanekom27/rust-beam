@@ -144,30 +144,58 @@ jobs:
   #       env:
   #         GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
-  docker-build-deploy:
-    name: Docker build and deploy
+  # docker-build-deploy:
+  #   name: Docker build and deploy
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+
+  #     - name: Build Docker image
+  #       run: docker build -t ${{ env.BINARY_NAME }}:latest .
+
+  #     - name: Install doctl
+  #       uses: digitalocean/action-doctl@v2
+  #       with:
+  #         token: ${{ secrets.DO_TOKEN }}
+
+  #     - name: Log in to DO Container Registry
+  #       run: doctl registry login --expiry-seconds 600
+
+  #     - name: Tag image
+  #       run: |
+  #         docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
+  #         docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
+
+  #     - name: Push image to DO Container Registry
+  #       run: |
+  #         docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+  #         docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
+
+  update-server-container:
+    name: Update server container
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: docker build -t ${{ env.BINARY_NAME }}:latest .
-
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_TOKEN }}
-
-      - name: Log in to DO Container Registry
-        run: doctl registry login --expiry-seconds 600
-
-      - name: Tag image
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up SSH
         run: |
-          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
-          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+        shell: bash
 
-      - name: Push image to DO Container Registry
+      # Add your other steps here
+      - name: Run a script
         run: |
-          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
-          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
+          ssh root@${{ secrets.DROPLET_IP }} -i ~/.ssh/id_rsa << EOF
+          doctl auth init -t ${{ secrets.DO_TOKEN }}
+          doctl registry login
+          docker pull registry.digitalocean.com/cube-registry/rust-beam:latest
+          docker stop rust-beam
+          docker rm rust-beam
+          docker run -d -p 7878:7878 -p 7879:7879 --name rust-beam --privileged registry.digitalocean.com/cube-registry/rust-beam:latest rust-beam relay
+          EOF
+        shell: bash
       

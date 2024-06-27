@@ -183,7 +183,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DO_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H your_droplet_ip >> ~/.ssh/known_hosts
+          eval $(ssh-agent)
+          ssh-add ~/.ssh/id_rsa
         shell: bash
 
       # Add your other steps here

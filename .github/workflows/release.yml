@@ -183,7 +183,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.DO_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
         shell: bash
 
       # Add your other steps here

@@ -177,11 +177,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Debug Key
-        run: |
-          echo "${{ secrets.DO_PRIVATE_KEY }}" | head -c 20
-        shell: bash
       
       - name: Set up SSH
         run: |
@@ -193,10 +188,9 @@ jobs:
           ssh-add ~/.ssh/id_rsa
         shell: bash
 
-      # Add your other steps here
       - name: Run a script
         run: |
-          ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.DROPLET_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.DROPLET_IP }} << EOF
           doctl auth init -t ${{ secrets.DO_TOKEN }}
           doctl registry login
           docker pull registry.digitalocean.com/cube-registry/rust-beam:latest

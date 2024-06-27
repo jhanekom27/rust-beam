@@ -14,7 +14,6 @@ env:
 jobs:
   build:
     name: Build package
-
     strategy:
       matrix:
         config:
@@ -24,17 +23,17 @@ jobs:
             platform: macos
           - os: windows-latest
             platform: windows
-    
     runs-on: ${{ matrix.config.os }}
-
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           override: true
+
       - name: Build release
         run: cargo build --release
 
@@ -75,8 +74,10 @@ jobs:
     - build
     steps:
       - uses: actions/checkout@v3
+
       - name: Download all artifacts
         uses: actions/download-artifact@v3
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -124,10 +125,12 @@ jobs:
           repository: jhanekom27/homebrew-${{ env.BINARY_NAME }}
           path: homebrew-${{ env.BINARY_NAME }}
           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
       - name: Update homebrew formula
         run: |
           cd homebrew-${{ env.BINARY_NAME }}
           ./update_formula.sh ${{ github.ref_name }} ${{ env.BINARY_NAME }}
+
       - name: Commit and push changes
         run: |
           cd homebrew-${{ env.BINARY_NAME }}
@@ -138,4 +141,62 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  docker-build-deploy:
+    name: Docker build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.BINARY_NAME }}:latest .
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_TOKEN }}
+
+      - name: Log in to DO Container Registry
+        run: doctl registry login --expiry-seconds 600
+
+      - name: Tag image
+        run: |
+          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
+          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
+
+      - name: Push image to DO Container Registry
+        run: |
+          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
+
+  update-server-container:
+    name: Update server container
+    runs-on: ubuntu-latest
+    needs:
+      - docker-build-deploy
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+          eval $(ssh-agent)
+          ssh-add ~/.ssh/id_rsa
+        shell: bash
+
+      - name: Run a script
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.DROPLET_IP }} << EOF
+          doctl auth init -t ${{ secrets.DO_TOKEN }}
+          doctl registry login
+          docker pull registry.digitalocean.com/cube-registry/rust-beam:latest
+          docker stop rust-beam
+          docker rm rust-beam
+          docker run -d -p 7878:7878 -p 7879:7879 --name rust-beam --privileged registry.digitalocean.com/cube-registry/rust-beam:latest rust-beam relay
+          EOF
+        shell: bash
       

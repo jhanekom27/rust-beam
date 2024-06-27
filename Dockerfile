@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the Cargo.toml and Cargo.lock files
-COPY Cargo.toml Cargo.lock config.yaml ./
+COPY Cargo.toml Cargo.lock ./
 
 # Copy the source code
 COPY src ./src
@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the compiled binary from the build stage
 COPY --from=builder /app/target/release/rust-beam /usr/local/bin/rust-beam
-COPY --from=builder /app/config.yaml /config.yaml
 
 # Set the startup command to run your binary
 CMD ["rust-beam", "relay"]

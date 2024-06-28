@@ -186,6 +186,9 @@ jobs:
           token: ${{ secrets.DO_TOKEN }}
 
       - name: Set environment variable
+        run: echo "$(doctl compute droplet list --format Name,PublicIPv4 --no-header | grep {{.DROPLET_NAME}} | awk '{print $2}')"
+
+      - name: Set environment variable
         run: echo "DROPLET_IP=$(doctl compute droplet list --format Name,PublicIPv4 --no-header | grep {{.DROPLET_NAME}} | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Use environment variable

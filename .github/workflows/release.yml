@@ -187,6 +187,10 @@ jobs:
 
       - name: Set environment variable
         run: echo "DROPLET_IP=$(doctl compute droplet list --format Name,PublicIPv4 --no-header | grep {{.DROPLET_NAME}} | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Use environment variable
+        run: |
+          echo "The value of DROPLET_IP is $DROPLET_IP"
       
       - name: Set up SSH
         run: |

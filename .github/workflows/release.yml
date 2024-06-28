@@ -12,185 +12,193 @@ env:
   BINARY_NAME: rust-beam
 
 jobs:
-  build:
-    name: Build package
-    strategy:
-      matrix:
-        config:
-          - os: ubuntu-latest
-            platform: linux
-          - os: macos-latest
-            platform: macos
-          - os: windows-latest
-            platform: windows
-    runs-on: ${{ matrix.config.os }}
-    steps:
-      - uses: actions/checkout@v3
+   build:
+     name: Build package
+     strategy:
+       matrix:
+         config:
+           - os: ubuntu-latest
+             platform: linux
+           - os: macos-latest
+             platform: macos
+           - os: windows-latest
+             platform: windows
+     runs-on: ${{ matrix.config.os }}
+     steps:
+       - uses: actions/checkout@v3
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+       - name: Set up Rust
+         uses: actions-rs/toolchain@v1
+         with:
+           toolchain: stable
+           profile: minimal
+           override: true
 
-      - name: Build release
-        run: cargo build --release
+       - name: Build release
+         run: cargo build --release
 
-      - name: Package for homebrew
-        if: matrix.config.os != 'windows-latest'
-        run: tar -czvf ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz -C target/release ${{ env.BINARY_NAME }}
+       - name: Package for homebrew
+         if: matrix.config.os != 'windows-latest'
+         run: tar -czvf ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz -C target/release ${{ env.BINARY_NAME }}
       
-      - name: Calculate SHA256 checksum
-        if: matrix.config.platform != 'windows'
-        run: shasum -a 256 ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz > ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
+       - name: Calculate SHA256 checksum
+         if: matrix.config.platform != 'windows'
+         run: shasum -a 256 ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz > ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
 
-      - name: Upload windows artifact
-        if: matrix.config.platform == 'windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.exe
-          path: target/release/${{ env.BINARY_NAME }}.exe
+       - name: Upload windows artifact
+         if: matrix.config.platform == 'windows'
+         uses: actions/upload-artifact@v3
+         with:
+           name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.exe
+           path: target/release/${{ env.BINARY_NAME }}.exe
 
-      - name: Upload unix artifacts
-        if: matrix.config.platform != 'windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
-          path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
+       - name: Upload unix artifacts
+         if: matrix.config.platform != 'windows'
+         uses: actions/upload-artifact@v3
+         with:
+           name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
+           path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.tar.gz
 
-      - name: Upload unix checksums
-        if: matrix.config.platform != 'windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
-          path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
+       - name: Upload unix checksums
+         if: matrix.config.platform != 'windows'
+         uses: actions/upload-artifact@v3
+         with:
+           name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
+           path: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.config.platform }}.sha256
 
 
-  release:
-    name: Release packages on Github
+   release:
+     name: Release packages on Github
+     runs-on: ubuntu-latest
+     needs: 
+     - build
+     steps:
+       - uses: actions/checkout@v3
+
+       - name: Download all artifacts
+         uses: actions/download-artifact@v3
+
+       - name: Create Release
+         id: create_release
+         uses: actions/create-release@v1
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         with:
+           tag_name: ${{ github.ref }}
+           release_name: Release ${{ github.ref }}
+           draft: false
+           prerelease: false
+
+       - name: Upload Linux Release Asset
+         uses: actions/upload-release-asset@v1
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         with:
+           upload_url: ${{ steps.create_release.outputs.upload_url }}
+           asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
+           asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
+           asset_content_type: application/gzip
+
+       - name: Upload MacOS Release Asset
+         uses: actions/upload-release-asset@v1
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         with:
+           upload_url: ${{ steps.create_release.outputs.upload_url }}
+           asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz/${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz
+           asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz
+           asset_content_type: application/gzip
+
+       - name: Upload Windows Release Asset
+         uses: actions/upload-release-asset@v1
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         with:
+           upload_url: ${{ steps.create_release.outputs.upload_url }}
+           asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}.exe
+           asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
+           asset_content_type: application/octet-stream
+
+       - name: Checkout homebrew-tap
+         uses: actions/checkout@v3
+         with:
+           repository: jhanekom27/homebrew-${{ env.BINARY_NAME }}
+           path: homebrew-${{ env.BINARY_NAME }}
+           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+       - name: Update homebrew formula
+         run: |
+           cd homebrew-${{ env.BINARY_NAME }}
+           ./update_formula.sh ${{ github.ref_name }} ${{ env.BINARY_NAME }}
+
+       - name: Commit and push changes
+         run: |
+           cd homebrew-${{ env.BINARY_NAME }}
+           git config --global user.name 'github-actions[bot]'
+           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+           git add .
+           git commit -m "Update formula for version ${{ github.ref_name }}"
+           git push
+         env:
+           GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+   docker-build-deploy:
+     name: Docker build and deploy
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v3
+
+       - name: Build Docker image
+         run: docker build -t ${{ env.BINARY_NAME }}:latest .
+
+       - name: Install doctl
+         uses: digitalocean/action-doctl@v2
+         with:
+           token: ${{ secrets.DO_TOKEN }}
+
+       - name: Log in to DO Container Registry
+         run: doctl registry login --expiry-seconds 600
+
+       - name: Tag image
+         run: |
+           docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
+           docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
+
+       - name: Push image to DO Container Registry
+         run: |
+           docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
+           docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
+
+  update-server-container:
+    name: Update server container
     runs-on: ubuntu-latest
-    needs: 
-    - build
+     needs:
+       - docker-build-deploy
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz/${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
-          asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-linux.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload MacOS Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz/${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz
-          asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-macos.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe/${{ env.BINARY_NAME }}.exe
-          asset_name: ${{ env.BINARY_NAME }}-${{ github.ref_name }}-windows.exe
-          asset_content_type: application/octet-stream
-
-      - name: Checkout homebrew-tap
+      - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          repository: jhanekom27/homebrew-${{ env.BINARY_NAME }}
-          path: homebrew-${{ env.BINARY_NAME }}
-          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-
-      - name: Update homebrew formula
-        run: |
-          cd homebrew-${{ env.BINARY_NAME }}
-          ./update_formula.sh ${{ github.ref_name }} ${{ env.BINARY_NAME }}
-
-      - name: Commit and push changes
-        run: |
-          cd homebrew-${{ env.BINARY_NAME }}
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .
-          git commit -m "Update formula for version ${{ github.ref_name }}"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-
-  docker-build-deploy:
-    name: Docker build and deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: docker build -t ${{ env.BINARY_NAME }}:latest .
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_TOKEN }}
 
-      - name: Log in to DO Container Registry
-        run: doctl registry login --expiry-seconds 600
+      - name: Set environment variable
+        run: echo "DROPLET_IP=$(doctl compute droplet list --format Name,PublicIPv4 --no-header | grep rust-beam-droplet | awk '{print $2}')" >> $GITHUB_ENV
 
-      - name: Tag image
-        run: |
-          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}}
-          docker tag ${{ env.BINARY_NAME }}:latest registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest 
-
-      - name: Push image to DO Container Registry
-        run: |
-          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:${{ github.ref_name}} 
-          docker push registry.digitalocean.com/cube-registry/${{ env.BINARY_NAME }}:latest
-
-  update-server-container:
-    name: Update server container
-    runs-on: ubuntu-latest
-    needs:
-      - docker-build-deploy
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DO_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
           eval $(ssh-agent)
           ssh-add ~/.ssh/id_rsa
         shell: bash
 
       - name: Run a script
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.DROPLET_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ env.DROPLET_IP }} << EOF
           doctl auth init -t ${{ secrets.DO_TOKEN }}
           doctl registry login
           docker pull registry.digitalocean.com/cube-registry/rust-beam:latest

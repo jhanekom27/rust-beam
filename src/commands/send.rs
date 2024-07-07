@@ -4,7 +4,6 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
-use uuid::Uuid;
 
 pub async fn send_file(
     file_path: &str,
@@ -15,11 +14,12 @@ pub async fn send_file(
     let mut buffer = [0; 1024];
     let mut connection = TcpStream::connect(server_address).await?;
 
-    let uuid_buf = &mut [0; 16];
-    connection.read(uuid_buf).await?;
-    let relay_uuid = Uuid::from_bytes(*uuid_buf);
+    let file_key_buffer = &mut [0; 32];
+    connection.read(file_key_buffer).await?;
+    let file_key = String::from_utf8(file_key_buffer.to_vec())
+        .expect("Invalid UTF-8 Sequence");
 
-    println!("{:?}", relay_uuid);
+    println!("{:?}", file_key);
 
     while let Ok(n) = file.read(&mut buffer).await {
         if n == 0 {

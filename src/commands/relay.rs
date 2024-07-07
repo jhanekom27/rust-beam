@@ -23,7 +23,6 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             // Get the sender connection and add to state
             sender = sender_listener.accept() => {
                 let (mut sender_conn, _) = sender?;
-                //let uuid = Uuid::new_v4();
                 let file_key = get_random_name();
                 println!("{:?}", file_key);
 
@@ -41,14 +40,14 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             // Get the receiver connection
             receiver = receiver_listener.accept() => {
                 let (mut receiver_conn, _) = receiver?;
-                let uuid_buf = &mut [0; 16];
-                receiver_conn.read(uuid_buf).await?;
+                let file_key_buffer = &mut [0; 32];
+                receiver_conn.read(file_key_buffer).await?;
 
-                let receiver_uuid = String::from_utf8(uuid_buf.to_vec()).expect("Invalid UTF-8 Sequence");
-                println!("{:?}", receiver_uuid);
+                let file_key = String::from_utf8(file_key_buffer.to_vec()).expect("Invalid UTF-8 Sequence");
+                println!("{:?}", file_key);
 
 
-                let sender_conn = match state.sessions.lock().await.get(&receiver_uuid) {
+                let sender_conn = match state.sessions.lock().await.get(&file_key) {
                     Some(session) => session.sender_connection.clone(),
                     None => {
                         println!("No sender connection found for receiver");
@@ -73,7 +72,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 });
 
                 // Remove the stored session
-                state.sessions.lock().await.remove(&receiver_uuid);
+                state.sessions.lock().await.remove(&file_key);
             }
         }
     }

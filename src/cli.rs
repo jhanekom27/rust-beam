@@ -15,7 +15,6 @@ pub enum Commands {
 
 #[derive(Debug, Args)]
 pub struct SendArgs {
-    #[clap(short, long)]
     pub file_path: String,
 }
 

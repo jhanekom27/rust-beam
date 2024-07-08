@@ -2,10 +2,10 @@
 
 **NOTE: This is still very unstable as in very early development**
 
-`rust-beam` is a simple file transfer CLI tool. 
-Often at work it is needed to share passwords and secrets with others on your team, 
-but rarely does everyone have a file manager setup to easily share secrets with one another. 
-`rust-beam` lets you easily stream the file to another user via the relay server. 
+`rust-beam` is a simple file transfer CLI tool.
+Often at work it is needed to share passwords and secrets with others on your team,
+but rarely does everyone have a file manager setup to easily share secrets with one another.
+`rust-beam` lets you easily stream the file to another user via the relay server.
 The file is never stored so there is no need to worry about how or where the data is used.
 
 ## Workflow
@@ -26,9 +26,9 @@ brew install rust-beam
 
 ### Windows
 
-¯\_(ツ)_/¯
+¯\_(ツ)\_/¯
 
-_Not sure how to package for windows yet, but `.exe` is available via GitHub release
+\_Not sure how to package for windows yet, but `.exe` is available via GitHub release
 
 ## Usage
 
@@ -44,13 +44,12 @@ Wait for UUID and send to receiver
 
 Wait for file transfer to finish
 
-
 ## TODO List
 
 - [ ] Allow file compression before sending to reduce transfer size
 - [ ] Allow file encryption before sending
-- [ ] Use a shorter UUID
-- [ ] Copy UUID to clipboard
+- [x] Use a shorter UUID
+- [x] Copy UUID to clipboard
 - [ ] Improve info presentation during usage
 - [ ] Allow retention of original file
 - [ ] Allow renaming file when saving
@@ -60,4 +59,3 @@ Wait for file transfer to finish
 
 - [ ] Allow custom config for personal relay server
 - [ ] Reduce container size
-

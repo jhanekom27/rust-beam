@@ -53,7 +53,7 @@ Wait for file transfer to finish
 - [ ] Improve info presentation during usage
 - [ ] Allow retention of original file
 - [ ] Allow renaming file when saving
-- [ ] Improve connection handling, no file transfer until receiver connected
+- [x] Improve connection handling, no file transfer until receiver connected
 
 ### Potential updates
 

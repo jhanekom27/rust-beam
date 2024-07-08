@@ -7,12 +7,45 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::utils::{get_key_from_conn, get_random_name};
+use crate::{
+    utils::{get_key_from_conn, get_random_name},
+    ReceiverInfo,
+};
 use crate::{Session, State};
 
 async fn notify_sender(sender_lock: Arc<Mutex<TcpStream>>) -> io::Result<()> {
     sender_lock.lock().await.write_all(&[1]).await?;
     Ok(())
+}
+
+async fn get_receiver_info(
+    connection: &mut TcpStream,
+) -> io::Result<ReceiverInfo> {
+    let mut buffer = [0; 1024];
+    match connection.read(&mut buffer).await {
+        Ok(n) => {
+            if n == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "No data received",
+                ));
+            }
+
+            let received = &buffer[..n];
+            if let Ok(my_struct) = serde_json::from_str::<ReceiverInfo>(
+                std::str::from_utf8(received).unwrap(),
+            ) {
+                println!("Received: {:?}", my_struct);
+                return Ok(my_struct);
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Failed to deserialize",
+                ));
+            }
+        }
+        Err(e) => return Err(e),
+    }
 }
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
@@ -32,12 +65,18 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_random_name();
                 println!("{}", file_key);
 
+                let receiver_info = get_receiver_info(&mut sender_conn).await?;
+                println!("{:?}", receiver_info);
+
                 sender_conn.write_all(file_key.as_bytes()).await?;
 
                 state.sessions.lock().await.insert(
-                    file_key,
+                    file_key.clone(),
                     Session {
                         sender_connection: Arc::new(Mutex::new(sender_conn)),
+                        receiver_info: ReceiverInfo {
+                            file_name: file_key}
+
                     },
                 );
                 println!("{:?}", state);

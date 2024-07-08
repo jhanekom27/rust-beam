@@ -1,11 +1,17 @@
-use std::io;
+use std::{
+    io::{self, Error, ErrorKind},
+    path::PathBuf,
+};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 
-use crate::utils::{copy_key_to_clipbpard, get_key_from_conn};
+use crate::{
+    utils::{copy_key_to_clipbpard, get_key_from_conn},
+    ReceiverInfo,
+};
 
 async fn wait_for_receiver(mut connection: &mut TcpStream) -> io::Result<()> {
     println!("Waiting for receiver to be ready");
@@ -15,13 +21,39 @@ async fn wait_for_receiver(mut connection: &mut TcpStream) -> io::Result<()> {
     Ok(())
 }
 
+async fn send_receiver_info(
+    mut connection: &mut TcpStream,
+    receiver_info: &ReceiverInfo,
+) -> io::Result<()> {
+    let receiver_info_json = serde_json::to_string(receiver_info)?;
+    connection.write_all(receiver_info_json.as_bytes()).await?;
+
+    Ok(())
+}
+
 pub async fn send_file(
-    file_path: &str,
+    file_path: &PathBuf,
     server_address: &str,
 ) -> io::Result<()> {
-    println!("Sending file: {}", file_path);
+    println!(
+        "Sending file: {}",
+        file_path
+            .to_str()
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid file path"))?
+    );
 
     let mut connection = TcpStream::connect(server_address).await?;
+
+    let receiver_info = ReceiverInfo {
+        file_name: file_path
+            .file_name()
+            .ok_or(Error::new(ErrorKind::Other, "Invalid file path"))?
+            .to_str()
+            .ok_or(Error::new(ErrorKind::Other, "Invalid file path"))?
+            .to_string(),
+    };
+    println!("Receiver info: {:?}", receiver_info);
+    send_receiver_info(&mut connection, &receiver_info).await?;
 
     let file_key = get_key_from_conn(&mut connection).await?;
 

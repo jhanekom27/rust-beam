@@ -6,6 +6,7 @@ mod utils;
 use std::{collections::HashMap, io, sync::Arc};
 
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 use tokio::{net::TcpStream, sync::Mutex};
 
 use cli::{Cli, Commands};
@@ -22,6 +23,12 @@ struct State {
 #[derive(Debug)]
 struct Session {
     sender_connection: Arc<Mutex<TcpStream>>,
+    receiver_info: ReceiverInfo,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ReceiverInfo {
+    file_name: String,
 }
 
 #[tokio::main]

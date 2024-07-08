@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -15,7 +16,7 @@ pub enum Commands {
 
 #[derive(Debug, Args)]
 pub struct SendArgs {
-    pub file_path: String,
+    pub file_path: PathBuf,
 }
 
 #[derive(Debug, Args)]

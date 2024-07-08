@@ -7,7 +7,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::utils::get_random_name;
+use crate::utils::{get_key_from_buf, get_random_name};
 use crate::{Session, State};
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
@@ -44,7 +44,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key_buffer = &mut [0; 32];
                 receiver_conn.read(file_key_buffer).await?;
 
-                let file_key = String::from_utf8(file_key_buffer.to_vec()).expect("Invalid UTF-8 Sequence").trim_end_matches("\0").to_string();
+                let file_key = get_key_from_buf(file_key_buffer);
                 println!("{:?}", file_key);
 
 

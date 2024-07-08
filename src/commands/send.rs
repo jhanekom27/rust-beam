@@ -5,6 +5,8 @@ use tokio::{
     net::TcpStream,
 };
 
+use crate::utils::get_key_from_buf;
+
 pub async fn send_file(
     file_path: &str,
     server_address: &str,
@@ -14,13 +16,10 @@ pub async fn send_file(
     let mut file_buffer = [0; 1024];
     let mut connection = TcpStream::connect(server_address).await?;
 
-    let file_keu_buffer = &mut [0; 32];
-    connection.read(file_keu_buffer).await?;
+    let file_key_buffer = &mut [0; 32];
+    connection.read(file_key_buffer).await?;
 
-    let file_key = String::from_utf8(file_keu_buffer.to_vec())
-        .expect("Invalid UTF-8 Sequence")
-        .trim_end_matches("\0")
-        .to_string();
+    let file_key = get_key_from_buf(file_key_buffer);
 
     println!("{}", file_key);
 

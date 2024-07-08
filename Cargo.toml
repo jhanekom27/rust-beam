@@ -7,8 +7,10 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
+copypasta = "0.10.1"
 memorable-wordlist = "0.1.7"
 rand_word = "0.1.18"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_yaml = "0.9.34"
+termion = "4.0.2"
 tokio = { version = "1.36.0", features = ["full"] }

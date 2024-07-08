@@ -2,13 +2,18 @@ use std::{io, sync::Arc};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
     select,
     sync::Mutex,
 };
 
 use crate::utils::{get_key_from_conn, get_random_name};
 use crate::{Session, State};
+
+async fn notify_sender(sender_lock: Arc<Mutex<TcpStream>>) -> io::Result<()> {
+    sender_lock.lock().await.write_all(&[1]).await?;
+    Ok(())
+}
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
     println!("Relaying data");
@@ -53,6 +58,8 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                     },
                 };
 
+                // Let the sender know the receiver is ready
+                notify_sender(sender_conn.clone()).await?;
 
                 tokio::spawn(async move {
                     let mut buffer = [0; 1024];

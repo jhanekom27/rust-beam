@@ -27,6 +27,7 @@ pub async fn send_receiver_info(
     connection: &mut TcpStream,
     receiver_info: &ReceiverInfo,
 ) -> io::Result<()> {
+    println!("Sending receiver info: {:?}", receiver_info);
     let receiver_info_json = serde_json::to_string(receiver_info)?;
     connection.write_all(receiver_info_json.as_bytes()).await?;
 

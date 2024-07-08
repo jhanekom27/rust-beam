@@ -5,6 +5,8 @@ use tokio::{
     net::TcpStream,
 };
 
+use crate::comms::get_receiver_info;
+
 pub async fn receive_file(
     sender_key: &String,
     server_address: &str,
@@ -15,6 +17,8 @@ pub async fn receive_file(
     let mut connection = TcpStream::connect(server_address).await?;
 
     connection.write_all(sender_key.as_bytes()).await?;
+
+    let receiver_info = get_receiver_info(&mut connection).await?;
 
     while let Ok(n) = connection.read(&mut buffer).await {
         if n == 0 {

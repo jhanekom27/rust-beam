@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use crate::{
-    comms::{get_receiver_info, notify_sender},
+    comms::{get_receiver_info, notify_sender, send_receiver_info},
     utils::{get_key_from_conn, get_random_name},
     ReceiverInfo,
 };
@@ -54,16 +54,22 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_key_from_conn(&mut receiver_conn).await?;
                 println!("{}", file_key);
 
-                let sender_conn = match state.sessions.lock().await.get(&file_key) {
-                    Some(session) => session.sender_connection.clone(),
+                let locked_sessions = state.sessions.lock().await;
+                let session = match locked_sessions.get(&file_key) {
+                    Some(session) => session,
                     None => {
                         println!("No sender connection found for receiver");
                         continue
                     },
                 };
 
+                let sender_conn = session.sender_connection.clone();
+                let receiver_info = &session.receiver_info;
+
                 // Let the sender know the receiver is ready
                 notify_sender(sender_conn.clone()).await?;
+
+                send_receiver_info(&mut receiver_conn, &receiver_info).await?;
 
                 tokio::spawn(async move {
                     let mut buffer = [0; 1024];

@@ -5,7 +5,7 @@ use tokio::{
     net::TcpStream,
 };
 
-use crate::utils::get_key_from_conn;
+use crate::utils::{copy_key_to_clipbpard, get_key_from_conn};
 
 pub async fn send_file(
     file_path: &str,
@@ -17,7 +17,8 @@ pub async fn send_file(
     let mut connection = TcpStream::connect(server_address).await?;
 
     let file_key = get_key_from_conn(&mut connection).await?;
-    println!("{}", file_key);
+
+    copy_key_to_clipbpard(file_key);
 
     while let Ok(n) = file.read(&mut file_buffer).await {
         if n == 0 {

@@ -2,51 +2,17 @@ use std::{io, sync::Arc};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     select,
     sync::Mutex,
 };
 
 use crate::{
+    comms::{get_receiver_info, notify_sender},
     utils::{get_key_from_conn, get_random_name},
     ReceiverInfo,
 };
 use crate::{Session, State};
-
-async fn notify_sender(sender_lock: Arc<Mutex<TcpStream>>) -> io::Result<()> {
-    sender_lock.lock().await.write_all(&[1]).await?;
-    Ok(())
-}
-
-async fn get_receiver_info(
-    connection: &mut TcpStream,
-) -> io::Result<ReceiverInfo> {
-    let mut buffer = [0; 1024];
-    match connection.read(&mut buffer).await {
-        Ok(n) => {
-            if n == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "No data received",
-                ));
-            }
-
-            let received = &buffer[..n];
-            if let Ok(my_struct) = serde_json::from_str::<ReceiverInfo>(
-                std::str::from_utf8(received).unwrap(),
-            ) {
-                println!("Received: {:?}", my_struct);
-                return Ok(my_struct);
-            } else {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Failed to deserialize",
-                ));
-            }
-        }
-        Err(e) => return Err(e),
-    }
-}
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
     println!("Relaying data");
@@ -74,8 +40,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                     file_key.clone(),
                     Session {
                         sender_connection: Arc::new(Mutex::new(sender_conn)),
-                        receiver_info: ReceiverInfo {
-                            file_name: file_key}
+                        receiver_info
 
                     },
                 );

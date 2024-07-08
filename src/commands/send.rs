@@ -9,27 +9,10 @@ use tokio::{
 };
 
 use crate::{
+    comms::{send_receiver_info, wait_for_receiver},
     utils::{copy_key_to_clipbpard, get_key_from_conn},
     ReceiverInfo,
 };
-
-async fn wait_for_receiver(mut connection: &mut TcpStream) -> io::Result<()> {
-    println!("Waiting for receiver to be ready");
-    let receiver_status = &mut [0; 1];
-    connection.read(receiver_status).await?;
-    println!("Receiver is ready");
-    Ok(())
-}
-
-async fn send_receiver_info(
-    mut connection: &mut TcpStream,
-    receiver_info: &ReceiverInfo,
-) -> io::Result<()> {
-    let receiver_info_json = serde_json::to_string(receiver_info)?;
-    connection.write_all(receiver_info_json.as_bytes()).await?;
-
-    Ok(())
-}
 
 pub async fn send_file(
     file_path: &PathBuf,

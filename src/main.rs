@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod comms;
 mod config;
 mod utils;
 

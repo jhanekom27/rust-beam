@@ -1,5 +1,4 @@
 use clap::{Args, Parser, Subcommand};
-use uuid::Uuid;
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -22,5 +21,5 @@ pub struct SendArgs {
 
 #[derive(Debug, Args)]
 pub struct ReceiveArgs {
-    pub uuid: Uuid,
+    pub sender_key: String,
 }

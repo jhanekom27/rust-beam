@@ -6,8 +6,8 @@ use tokio::{
     select,
     sync::Mutex,
 };
-use uuid::Uuid;
 
+use crate::utils::{get_key_from_conn, get_random_name};
 use crate::{Session, State};
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
@@ -23,14 +23,14 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             // Get the sender connection and add to state
             sender = sender_listener.accept() => {
                 let (mut sender_conn, _) = sender?;
-                let uuid = Uuid::new_v4();
-                println!("{:?}", uuid);
+                // TODO: change to struct in the future
+                let file_key = get_random_name();
+                println!("{}", file_key);
 
-                sender_conn.write_all(uuid.as_bytes()).await?;
-
+                sender_conn.write_all(file_key.as_bytes()).await?;
 
                 state.sessions.lock().await.insert(
-                    uuid,
+                    file_key,
                     Session {
                         sender_connection: Arc::new(Mutex::new(sender_conn)),
                     },
@@ -39,14 +39,13 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             }
             // Get the receiver connection
             receiver = receiver_listener.accept() => {
+                println!("Receiver connected");
                 let (mut receiver_conn, _) = receiver?;
-                let uuid_buf = &mut [0; 16];
-                receiver_conn.read(uuid_buf).await?;
-                let receiver_uuid = Uuid::from_bytes(*uuid_buf);
-                println!("{:?}", receiver_uuid);
 
+                let file_key = get_key_from_conn(&mut receiver_conn).await?;
+                println!("{}", file_key);
 
-                let sender_conn = match state.sessions.lock().await.get(&receiver_uuid) {
+                let sender_conn = match state.sessions.lock().await.get(&file_key) {
                     Some(session) => session.sender_connection.clone(),
                     None => {
                         println!("No sender connection found for receiver");
@@ -71,7 +70,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 });
 
                 // Remove the stored session
-                state.sessions.lock().await.remove(&receiver_uuid);
+                state.sessions.lock().await.remove(&file_key);
             }
         }
     }

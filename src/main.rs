@@ -1,22 +1,22 @@
 mod cli;
 mod commands;
 mod config;
+mod utils;
 
 use std::{collections::HashMap, io, sync::Arc};
 
 use clap::Parser;
 use tokio::{net::TcpStream, sync::Mutex};
-use uuid::Uuid;
 
 use cli::{Cli, Commands};
-use commands::receive::{self, receive_file};
+use commands::receive::receive_file;
 use commands::relay::relay;
 use commands::send::send_file;
 use config::get_config;
 
 #[derive(Debug)]
 struct State {
-    sessions: Mutex<HashMap<Uuid, Session>>,
+    sessions: Mutex<HashMap<String, Session>>,
 }
 
 #[derive(Debug)]
@@ -44,7 +44,8 @@ async fn main() -> io::Result<()> {
             send_file(&send_args.file_path, &send_server_address).await?;
         }
         Commands::Receive(receive_args) => {
-            receive_file(receive_args.uuid, &receive_server_address).await?;
+            receive_file(&receive_args.sender_key, &receive_server_address)
+                .await?;
         }
         Commands::Relay => {
             relay(state.clone()).await?;

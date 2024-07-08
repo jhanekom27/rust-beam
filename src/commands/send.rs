@@ -4,7 +4,8 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
-use uuid::Uuid;
+
+use crate::utils::get_key_from_conn;
 
 pub async fn send_file(
     file_path: &str,
@@ -12,20 +13,17 @@ pub async fn send_file(
 ) -> io::Result<()> {
     println!("Sending file: {}", file_path);
     let mut file = tokio::fs::File::open(file_path).await?;
-    let mut buffer = [0; 1024];
+    let mut file_buffer = [0; 1024];
     let mut connection = TcpStream::connect(server_address).await?;
 
-    let uuid_buf = &mut [0; 16];
-    connection.read(uuid_buf).await?;
-    let relay_uuid = Uuid::from_bytes(*uuid_buf);
+    let file_key = get_key_from_conn(&mut connection).await?;
+    println!("{}", file_key);
 
-    println!("{:?}", relay_uuid);
-
-    while let Ok(n) = file.read(&mut buffer).await {
+    while let Ok(n) = file.read(&mut file_buffer).await {
         if n == 0 {
             break;
         }
-        connection.write_all(&buffer[..n]).await?;
+        connection.write_all(&file_buffer[..n]).await?;
     }
     Ok(())
 }

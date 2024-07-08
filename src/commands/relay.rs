@@ -42,12 +42,8 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 println!("Receiver connected");
                 let (mut receiver_conn, _) = receiver?;
 
-
-
                 let file_key = get_key_from_conn(&mut receiver_conn).await?;
                 println!("{}", file_key);
-
-
 
                 let sender_conn = match state.sessions.lock().await.get(&file_key) {
                     Some(session) => session.sender_connection.clone(),

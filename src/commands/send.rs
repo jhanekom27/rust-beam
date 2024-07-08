@@ -17,7 +17,6 @@ pub async fn send_file(
     let mut connection = TcpStream::connect(server_address).await?;
 
     let file_key = get_key_from_conn(&mut connection).await?;
-
     println!("{}", file_key);
 
     while let Ok(n) = file.read(&mut file_buffer).await {

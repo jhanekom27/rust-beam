@@ -7,7 +7,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::utils::{get_key_from_buf, get_random_name};
+use crate::utils::{get_key_from_conn, get_random_name};
 use crate::{Session, State};
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
@@ -41,11 +41,12 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             receiver = receiver_listener.accept() => {
                 println!("Receiver connected");
                 let (mut receiver_conn, _) = receiver?;
-                let file_key_buffer = &mut [0; 32];
-                receiver_conn.read(file_key_buffer).await?;
 
-                let file_key = get_key_from_buf(file_key_buffer);
-                println!("{:?}", file_key);
+
+
+                let file_key = get_key_from_conn(&mut receiver_conn).await?;
+                println!("{}", file_key);
+
 
 
                 let sender_conn = match state.sessions.lock().await.get(&file_key) {

@@ -23,11 +23,11 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             // Get the sender connection and add to state
             sender = sender_listener.accept() => {
                 let (mut sender_conn, _) = sender?;
+                // TODO: change to struct in the future
                 let file_key = get_random_name();
-                println!("{:?}", file_key);
+                println!("{}", file_key);
 
                 sender_conn.write_all(file_key.as_bytes()).await?;
-
 
                 state.sessions.lock().await.insert(
                     file_key,
@@ -39,11 +39,12 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             }
             // Get the receiver connection
             receiver = receiver_listener.accept() => {
+                println!("Receiver connected");
                 let (mut receiver_conn, _) = receiver?;
                 let file_key_buffer = &mut [0; 32];
                 receiver_conn.read(file_key_buffer).await?;
 
-                let file_key = String::from_utf8(file_key_buffer.to_vec()).expect("Invalid UTF-8 Sequence");
+                let file_key = String::from_utf8(file_key_buffer.to_vec()).expect("Invalid UTF-8 Sequence").trim_end_matches("\0").to_string();
                 println!("{:?}", file_key);
 
 

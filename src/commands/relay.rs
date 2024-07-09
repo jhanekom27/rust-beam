@@ -2,18 +2,17 @@ use std::{io, sync::Arc};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     select,
     sync::Mutex,
 };
 
-use crate::utils::{get_key_from_conn, get_random_name};
+use crate::{
+    comms::{get_receiver_info, notify_sender, send_receiver_info},
+    utils::{get_key_from_conn, get_random_name},
+    ReceiverInfo,
+};
 use crate::{Session, State};
-
-async fn notify_sender(sender_lock: Arc<Mutex<TcpStream>>) -> io::Result<()> {
-    sender_lock.lock().await.write_all(&[1]).await?;
-    Ok(())
-}
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
     println!("Relaying data");
@@ -32,12 +31,17 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_random_name();
                 println!("{}", file_key);
 
+                let receiver_info = get_receiver_info(&mut sender_conn).await?;
+                println!("{:?}", receiver_info);
+
                 sender_conn.write_all(file_key.as_bytes()).await?;
 
                 state.sessions.lock().await.insert(
-                    file_key,
+                    file_key.clone(),
                     Session {
                         sender_connection: Arc::new(Mutex::new(sender_conn)),
+                        receiver_info
+
                     },
                 );
                 println!("{:?}", state);
@@ -50,16 +54,22 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_key_from_conn(&mut receiver_conn).await?;
                 println!("{}", file_key);
 
-                let sender_conn = match state.sessions.lock().await.get(&file_key) {
-                    Some(session) => session.sender_connection.clone(),
+                let mut locked_sessions = state.sessions.lock().await;
+                let session = match locked_sessions.get(&file_key) {
+                    Some(session) => session,
                     None => {
                         println!("No sender connection found for receiver");
                         continue
                     },
                 };
 
+                let sender_conn = session.sender_connection.clone();
+                let receiver_info = &session.receiver_info;
+
                 // Let the sender know the receiver is ready
                 notify_sender(sender_conn.clone()).await?;
+
+                send_receiver_info(&mut receiver_conn, &receiver_info).await?;
 
                 tokio::spawn(async move {
                     let mut buffer = [0; 1024];
@@ -77,7 +87,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 });
 
                 // Remove the stored session
-                state.sessions.lock().await.remove(&file_key);
+                locked_sessions.remove(&file_key);
             }
         }
     }

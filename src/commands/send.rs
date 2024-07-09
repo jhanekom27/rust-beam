@@ -1,4 +1,5 @@
 use std::{
+    fs::metadata,
     io::{self, Error, ErrorKind},
     path::PathBuf,
 };
@@ -10,8 +11,8 @@ use tokio::{
 
 use crate::{
     comms::{send_receiver_info, wait_for_receiver},
+    models::ReceiverInfo,
     utils::{copy_key_to_clipbpard, get_key_from_conn},
-    ReceiverInfo,
 };
 
 pub async fn send_file(
@@ -34,6 +35,7 @@ pub async fn send_file(
             .to_str()
             .ok_or(Error::new(ErrorKind::Other, "Invalid file path"))?
             .to_string(),
+        file_size: metadata(file_path)?.len(),
     };
     println!("Receiver info: {:?}", receiver_info);
     send_receiver_info(&mut connection, &receiver_info).await?;

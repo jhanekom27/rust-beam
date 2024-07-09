@@ -2,35 +2,20 @@ mod cli;
 mod commands;
 mod comms;
 mod config;
+mod models;
 mod utils;
 
 use std::{collections::HashMap, io, sync::Arc};
 
 use clap::Parser;
-use serde::{Deserialize, Serialize};
-use tokio::{net::TcpStream, sync::Mutex};
+use models::State;
+use tokio::sync::Mutex;
 
 use cli::{Cli, Commands};
 use commands::receive::receive_file;
 use commands::relay::relay;
 use commands::send::send_file;
 use config::get_config;
-
-#[derive(Debug)]
-struct State {
-    sessions: Mutex<HashMap<String, Session>>,
-}
-
-#[derive(Debug)]
-struct Session {
-    sender_connection: Arc<Mutex<TcpStream>>,
-    receiver_info: ReceiverInfo,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ReceiverInfo {
-    file_name: String,
-}
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

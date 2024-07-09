@@ -5,7 +5,7 @@ use tokio::{
     net::TcpStream,
 };
 
-use crate::{comms::get_receiver_info, ReceiverInfo};
+use crate::{comms::get_receiver_info, models::ReceiverInfo};
 
 pub async fn receive_file(
     sender_key: &String,
@@ -17,7 +17,10 @@ pub async fn receive_file(
     connection.write_all(sender_key.as_bytes()).await?;
 
     let receiver_info = get_receiver_info(&mut connection).await?;
-    let ReceiverInfo { file_name } = receiver_info;
+    let ReceiverInfo {
+        file_name,
+        file_size: _,
+    } = receiver_info;
 
     // TODO: Allow overwriting filename from cli args
     let mut file = tokio::fs::File::create(file_name).await?;

@@ -54,7 +54,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_key_from_conn(&mut receiver_conn).await?;
                 println!("{}", file_key);
 
-                let locked_sessions = state.sessions.lock().await;
+                let mut locked_sessions = state.sessions.lock().await;
                 let session = match locked_sessions.get(&file_key) {
                     Some(session) => session,
                     None => {
@@ -87,7 +87,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 });
 
                 // Remove the stored session
-                state.sessions.lock().await.remove(&file_key);
+                locked_sessions.remove(&file_key);
             }
         }
     }

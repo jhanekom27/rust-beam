@@ -68,6 +68,6 @@ pub async fn send_file(
         progress_bar.set_position(bytes_read);
     }
 
-    progress_bar.finish_with_message("done");
+    progress_bar.finish_with_message("Done");
     Ok(())
 }

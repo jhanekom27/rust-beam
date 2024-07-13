@@ -4,6 +4,7 @@ use std::{
     path::PathBuf,
 };
 
+use indicatif::{ProgressBar, ProgressStyle};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -46,13 +47,27 @@ pub async fn send_file(
 
     wait_for_receiver(&mut connection).await?;
 
+    // Create a progress bar
+    let progress_bar = ProgressBar::new(receiver_info.file_size);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
+    );
+
     let mut file = tokio::fs::File::open(file_path).await?;
     let mut file_buffer = [0; 1024];
+    let mut bytes_read = 0;
+    // TODO: extract this to a function
     while let Ok(n) = file.read(&mut file_buffer).await {
         if n == 0 {
             break;
         }
         connection.write_all(&file_buffer[..n]).await?;
+        // TODO: add update callback
+        bytes_read += n as u64;
+        progress_bar.set_position(bytes_read);
     }
+
+    progress_bar.finish_with_message("done");
     Ok(())
 }

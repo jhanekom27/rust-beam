@@ -9,10 +9,9 @@ use tokio::{
 
 use crate::{
     comms::{get_receiver_info, notify_sender, send_receiver_info},
+    models::{Session, State},
     utils::{get_key_from_conn, get_random_name},
-    ReceiverInfo,
 };
-use crate::{Session, State};
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
     println!("Relaying data");

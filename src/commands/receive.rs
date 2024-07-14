@@ -1,11 +1,11 @@
-use std::io;
+use std::{io, path::PathBuf};
 
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
+use tokio::{io::AsyncWriteExt, net::TcpStream};
+
+use crate::{
+    comms::get_receiver_info, models::ReceiverInfo,
+    transmission::transfer_tcp_to_file,
 };
-
-use crate::{comms::get_receiver_info, ReceiverInfo};
 
 pub async fn receive_file(
     sender_key: &String,
@@ -16,21 +16,13 @@ pub async fn receive_file(
 
     connection.write_all(sender_key.as_bytes()).await?;
 
-    let receiver_info = get_receiver_info(&mut connection).await?;
-    let ReceiverInfo { file_name } = receiver_info;
+    let ReceiverInfo {
+        file_name,
+        file_size,
+    } = get_receiver_info(&mut connection).await?;
 
-    // TODO: Allow overwriting filename from cli args
-    let mut file = tokio::fs::File::create(file_name).await?;
-    let mut buffer = [0; 1024];
-
-    while let Ok(n) = connection.read(&mut buffer).await {
-        if n == 0 {
-            break;
-        }
-        file.write_all(&buffer[..n]).await?;
-    }
-
-    println!("File received successfully");
+    transfer_tcp_to_file(&PathBuf::from(file_name), &mut connection, file_size)
+        .await?;
 
     Ok(())
 }

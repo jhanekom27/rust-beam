@@ -6,7 +6,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::ReceiverInfo;
+use crate::models::ReceiverInfo;
 
 pub async fn wait_for_receiver(connection: &mut TcpStream) -> io::Result<()> {
     println!("Waiting for receiver to be ready");

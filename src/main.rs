@@ -3,6 +3,8 @@ mod commands;
 mod comms;
 mod config;
 mod models;
+mod transmission;
+mod ui;
 mod utils;
 
 use std::{collections::HashMap, io, sync::Arc};

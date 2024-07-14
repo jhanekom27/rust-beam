@@ -47,6 +47,7 @@ Wait for file transfer to finish
 ## TODO List
 
 - [ ] Allow file compression before sending to reduce transfer size
+  - [ ] Do a speed test with this
 - [ ] Allow file encryption before sending
 - [x] Use a shorter UUID
 - [x] Copy UUID to clipboard

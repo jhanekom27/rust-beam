@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 copypasta = "0.10.1"
+flate2 = "1.0.30"
 indicatif = "0.17.8"
 memorable-wordlist = "0.1.7"
 rand_word = "0.1.18"

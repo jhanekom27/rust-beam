@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use crate::{
-    comms::{get_receiver_info, notify_sender, send_receiver_info},
+    comms::{get_meta_data, notify_sender, send_meta_data},
     models::{Session, State},
     utils::{get_key_from_conn, get_random_name},
 };
@@ -30,7 +30,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 let file_key = get_random_name();
                 println!("{}", file_key);
 
-                let receiver_info = get_receiver_info(&mut sender_conn).await?;
+                let receiver_info = get_meta_data(&mut sender_conn).await?;
                 println!("{:?}", receiver_info);
 
                 sender_conn.write_all(file_key.as_bytes()).await?;
@@ -68,7 +68,7 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
                 // Let the sender know the receiver is ready
                 notify_sender(sender_conn.clone()).await?;
 
-                send_receiver_info(&mut receiver_conn, &receiver_info).await?;
+                send_meta_data(&mut receiver_conn, &receiver_info).await?;
 
                 tokio::spawn(async move {
                     let mut buffer = [0; 1024];

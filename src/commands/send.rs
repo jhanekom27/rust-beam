@@ -7,8 +7,8 @@ use std::{
 use tokio::net::TcpStream;
 
 use crate::{
-    comms::{send_receiver_info, wait_for_receiver},
-    models::ReceiverInfo,
+    comms::{send_meta_data, wait_for_receiver},
+    models::SendMetaData,
     transmission::transfer_file_to_tcp,
     utils::{copy_key_to_clipbpard, get_key_from_conn},
 };
@@ -26,7 +26,7 @@ pub async fn send_file(
 
     let mut connection = TcpStream::connect(server_address).await?;
 
-    let receiver_info = ReceiverInfo {
+    let meta_data = SendMetaData {
         file_name: file_path
             .file_name()
             .ok_or(Error::new(ErrorKind::Other, "Invalid file path"))?
@@ -35,8 +35,8 @@ pub async fn send_file(
             .to_string(),
         file_size: metadata(file_path)?.len(),
     };
-    println!("Receiver info: {:?}", receiver_info);
-    send_receiver_info(&mut connection, &receiver_info).await?;
+    println!("Receiver info: {:?}", meta_data);
+    send_meta_data(&mut connection, &meta_data).await?;
 
     let file_key = get_key_from_conn(&mut connection).await?;
 

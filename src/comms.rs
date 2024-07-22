@@ -6,7 +6,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use crate::models::ReceiverInfo;
+use crate::models::SendMetaData;
 
 pub async fn wait_for_receiver(connection: &mut TcpStream) -> io::Result<()> {
     println!("Waiting for receiver to be ready");
@@ -23,9 +23,9 @@ pub async fn notify_sender(
     Ok(())
 }
 
-pub async fn send_receiver_info(
+pub async fn send_meta_data(
     connection: &mut TcpStream,
-    receiver_info: &ReceiverInfo,
+    receiver_info: &SendMetaData,
 ) -> io::Result<()> {
     println!("Sending receiver info: {:?}", receiver_info);
     let receiver_info_json = serde_json::to_string(receiver_info)?;
@@ -34,9 +34,9 @@ pub async fn send_receiver_info(
     Ok(())
 }
 
-pub async fn get_receiver_info(
+pub async fn get_meta_data(
     connection: &mut TcpStream,
-) -> io::Result<ReceiverInfo> {
+) -> io::Result<SendMetaData> {
     let mut buffer = [0; 1024];
     match connection.read(&mut buffer).await {
         Ok(n) => {
@@ -48,7 +48,7 @@ pub async fn get_receiver_info(
             }
 
             let received = &buffer[..n];
-            if let Ok(my_struct) = serde_json::from_str::<ReceiverInfo>(
+            if let Ok(my_struct) = serde_json::from_str::<SendMetaData>(
                 std::str::from_utf8(received).unwrap(),
             ) {
                 println!("Received: {:?}", my_struct);

@@ -10,7 +10,7 @@ use tokio::{
 use crate::{
     comms::{get_meta_data, notify_sender, send_meta_data},
     models::{Session, State},
-    utils::{get_key_from_conn, get_random_name},
+    utils::get_key_from_conn,
 };
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
@@ -26,14 +26,11 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
             // Get the sender connection and add to state
             sender = sender_listener.accept() => {
                 let (mut sender_conn, _) = sender?;
-                // TODO: change to struct in the future
-                let file_key = get_random_name();
-                println!("{}", file_key);
+
 
                 let receiver_info = get_meta_data(&mut sender_conn).await?;
                 println!("{:?}", receiver_info);
-
-                sender_conn.write_all(file_key.as_bytes()).await?;
+                let file_key = receiver_info.sender_key.clone();
 
                 state.sessions.lock().await.insert(
                     file_key.clone(),
@@ -67,6 +64,8 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
 
                 // Let the sender know the receiver is ready
                 notify_sender(sender_conn.clone()).await?;
+
+                // TODO: do the key exchange for encryption
 
                 send_meta_data(&mut receiver_conn, &receiver_info).await?;
 

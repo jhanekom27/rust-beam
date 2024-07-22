@@ -19,6 +19,7 @@ pub async fn receive_file(
     let SendMetaData {
         file_name,
         file_size,
+        sender_key: _,
     } = get_meta_data(&mut connection).await?;
 
     transfer_tcp_to_file(&PathBuf::from(file_name), &mut connection, file_size)

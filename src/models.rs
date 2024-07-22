@@ -17,4 +17,5 @@ pub struct Session {
 pub struct SendMetaData {
     pub file_name: String,
     pub file_size: u64,
+    pub sender_key: String,
 }

@@ -10,7 +10,7 @@ use crate::{
     comms::{send_meta_data, wait_for_receiver},
     models::SendMetaData,
     transmission::transfer_file_to_tcp,
-    utils::{copy_key_to_clipbpard, get_key_from_conn},
+    utils::{copy_key_to_clipbpard, get_random_name},
 };
 
 pub async fn send_file(
@@ -34,13 +34,12 @@ pub async fn send_file(
             .ok_or(Error::new(ErrorKind::Other, "Invalid file path"))?
             .to_string(),
         file_size: metadata(file_path)?.len(),
+        sender_key: get_random_name(), // TODO: add CLI option here
     };
     println!("Receiver info: {:?}", meta_data);
     send_meta_data(&mut connection, &meta_data).await?;
 
-    let file_key = get_key_from_conn(&mut connection).await?;
-
-    copy_key_to_clipbpard(file_key);
+    copy_key_to_clipbpard(meta_data.sender_key);
 
     wait_for_receiver(&mut connection).await?;
 

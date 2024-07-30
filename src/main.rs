@@ -33,6 +33,7 @@ async fn main() -> io::Result<()> {
     let receive_server_address =
         format!("{}:{}", config.server_url, config.receive_port);
 
+    // TODO: maybe move state to relay
     let state = Arc::new(State {
         sessions: Mutex::new(HashMap::new()),
     });

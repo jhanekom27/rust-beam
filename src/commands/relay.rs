@@ -64,7 +64,7 @@ async fn handle_receiver(
 
     println!("locking state");
     let mut locked_sessions = state.sessions.lock().await;
-    let session = match locked_sessions.get(&file_key) {
+    let session = match locked_sessions.remove(&file_key) {
         Some(session) => session,
         None => {
             // TODO: send error message to receiver and handle by server
@@ -85,22 +85,22 @@ async fn handle_receiver(
 
     send_meta_data(&mut receiver_conn, &receiver_info).await?;
 
-    // tokio::spawn(async move {
-    //     let mut buffer = [0; 1024];
-    //     let mut sender_conn_guard = sender_conn.lock().await;
+    let sender_conn_clone = session.sender_connection.clone();
 
-    //     loop {
-    //         let n = match sender_conn_guard.read(&mut buffer).await {
-    //             Ok(n) if n == 0 => return io::Result::Ok(()),
-    //             Ok(n) => n,
-    //             Err(e) => return Err(e),
-    //         };
-    //         receiver_conn.write_all(&buffer[..n]).await?;
-    //     }
-    // });
+    tokio::spawn(async move {
+        let mut buffer = [0; 1024];
+        let mut sender_conn_guard = sender_conn_clone.lock().await; // Lock the connection here
 
-    // Remove the stored session
-    // locked_sessions.remove(&file_key);
+        loop {
+            let n = match sender_conn_guard.read(&mut buffer).await {
+                Ok(n) if n == 0 => return io::Result::Ok(()),
+                Ok(n) => n,
+                Err(e) => return Err(e),
+            };
+            receiver_conn.write_all(&buffer[..n]).await?;
+        }
+    });
+
     Ok(())
 }
 

@@ -8,7 +8,10 @@ use tokio::{
 };
 
 use crate::{
-    comms::{get_inbound, get_meta_data, notify_sender, send_meta_data},
+    comms::{
+        get_inbound, get_meta_data, notify_sender, send_meta_data,
+        send_outbound,
+    },
     models::{Session, State},
     utils::get_key_from_conn,
 };
@@ -32,19 +35,6 @@ async fn handle_sender(
     );
     println!("{:?}", state);
 
-    // receive the inbound message
-    // let inbound_msg = get_inbound(&mut sender_conn).await?;
-    // println!("locking connection");
-    // let conn_clone = sender_connection.clone();
-    // let mut conn = conn_clone.lock().await;
-    // println!("Locked connection");
-    // let inbound_msg = {
-    //     // let mut conn = sender_connection.lock().await; // Lock the connection for use
-
-    //     get_inbound(&mut conn).await? // Dereference the lock to get the underlying connection
-    // };
-    // println!("connection unlocked");
-    // println!("Inbound message: {:?}", inbound_msg);
     Ok(())
 }
 
@@ -80,6 +70,9 @@ async fn handle_receiver(
 
     let receiver_message = get_inbound(&mut receiver_conn).await?;
     println!("Receiver message: {:?}", receiver_message);
+
+    send_outbound(&mut sender_conn_guard, &receiver_message).await?;
+    send_outbound(&mut receiver_conn, &sender_message).await?;
 
     let sender_conn_clone = session.sender_connection.clone();
 

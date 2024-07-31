@@ -77,27 +77,3 @@ pub async fn send_file(
 
     Ok(())
 }
-
-// fn foo() {
-//     // Both Alice and Bob share the same password.
-//     let password = Password::new("password123");
-
-//     // Initialize SPAKE2 instances for Alice and Bob.
-//     let alice =
-//         SPAKE2::<Ed25519Group>::new(Identity::new("alice"), password.clone());
-//     let bob =
-//         SPAKE2::<Ed25519Group>::new(Identity::new("bob"), password.clone());
-
-//     // Alice and Bob generate their first messages to send to each other.
-//     let alice_msg = alice.start();
-//     let bob_msg = bob.start();
-
-//     // Alice and Bob process each other's messages to generate their session keys.
-//     let alice_key = alice.finish(bob_msg).unwrap();
-//     let bob_key = bob.finish(alice_msg).unwrap();
-
-//     // Verify that both session keys are equal.
-//     assert_eq!(alice_key, bob_key);
-
-//     println!("Alice and Bob have successfully established a shared key!");
-// }

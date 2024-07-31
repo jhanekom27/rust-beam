@@ -5,7 +5,8 @@ use spake2::{Ed25519Group, Identity, Password, Spake2};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 use crate::{
-    comms::get_meta_data, models::SendMetaData,
+    comms::{get_meta_data, send_outbound, SpakeMessage},
+    models::SendMetaData,
     transmission::transfer_tcp_to_file,
 };
 
@@ -34,6 +35,13 @@ pub async fn receive_file(
     println!("outbound_msg: {:?}", outbound_msg);
 
     // send the outbound message
+    send_outbound(
+        &mut connection,
+        &SpakeMessage {
+            message: outbound_msg,
+        },
+    )
+    .await?;
 
     // receive the inbound message
 

@@ -17,25 +17,20 @@ async fn handle_sender(
     mut sender_conn: TcpStream,
     state: Arc<State>,
 ) -> Result<(), io::Error> {
-    // Handle the specific sender connection
-    println!("New sender connected: {:?}", sender_conn.peer_addr());
-    // Implement your logic to read from the sender
     let receiver_info = get_meta_data(&mut sender_conn).await?;
     println!("{:?}", receiver_info);
-    let file_key = receiver_info.sender_key.clone();
 
+    let file_key = receiver_info.sender_key.clone();
     let sender_connection = Arc::new(Mutex::new(sender_conn));
 
-    println!("locking state");
     state.sessions.lock().await.insert(
-        file_key.clone(),
+        file_key,
         Session {
             sender_connection: sender_connection.clone(), // Clone the Arc for the session
             receiver_info,
         },
     );
     println!("{:?}", state);
-    println!("state unlocked");
 
     // receive the inbound message
     // let inbound_msg = get_inbound(&mut sender_conn).await?;
@@ -62,7 +57,6 @@ async fn handle_receiver(
     let file_key = get_key_from_conn(&mut receiver_conn).await?;
     println!("{}", file_key);
 
-    println!("locking state");
     let mut locked_sessions = state.sessions.lock().await;
     let session = match locked_sessions.remove(&file_key) {
         Some(session) => session,
@@ -78,12 +72,14 @@ async fn handle_receiver(
 
     // Let the sender know the receiver is ready
     notify_sender(&mut sender_conn_guard).await?;
+    send_meta_data(&mut receiver_conn, &receiver_info).await?;
 
     // TODO: do the key exchange for encryption
     let sender_message = get_inbound(&mut sender_conn_guard).await?;
     println!("Sender message: {:?}", sender_message);
 
-    send_meta_data(&mut receiver_conn, &receiver_info).await?;
+    let receiver_message = get_inbound(&mut receiver_conn).await?;
+    println!("Receiver message: {:?}", receiver_message);
 
     let sender_conn_clone = session.sender_connection.clone();
 
@@ -110,10 +106,12 @@ async fn handle_sender_listener(
 ) {
     loop {
         match sender_listener.accept().await {
-            Ok((sender, _)) => {
+            Ok((sender_connection, _)) => {
                 let state_clone = Arc::clone(&state);
                 task::spawn(async move {
-                    if let Err(e) = handle_sender(sender, state_clone).await {
+                    if let Err(e) =
+                        handle_sender(sender_connection, state_clone).await
+                    {
                         eprintln!("Error handling sender: {:?}", e);
                     }
                 });
@@ -136,12 +134,12 @@ async fn handle_receiver_listener(
                 task::spawn(async move {
                     if let Err(e) = handle_receiver(receiver, state_clone).await
                     {
-                        eprintln!("Error handling sender: {:?}", e);
+                        eprintln!("Error handling receiver: {:?}", e);
                     }
                 });
             }
             Err(e) => {
-                println!("Error accepting sender connection: {:?}", e);
+                println!("Error accepting reciver connection: {:?}", e);
             }
         }
     }
@@ -149,7 +147,6 @@ async fn handle_receiver_listener(
 
 pub async fn relay(state: Arc<State>) -> io::Result<()> {
     println!("Relaying data");
-    println!("{:?}", state);
 
     // Create sender and reciver listener as tcpListener
     let sender_listener = TcpListener::bind("0.0.0.0:7878").await?;
@@ -159,7 +156,6 @@ pub async fn relay(state: Arc<State>) -> io::Result<()> {
         let state_clone = state.clone();
         task::spawn(handle_sender_listener(sender_listener, state_clone))
     };
-
     let receiver_task = {
         let state_clone = state.clone();
         task::spawn(handle_receiver_listener(receiver_listener, state_clone))

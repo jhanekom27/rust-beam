@@ -51,8 +51,13 @@ pub async fn receive_file(
     let key2 = spake.finish(&inbound_spake_message.message).unwrap();
     println!("Key2: {:?}", key2);
 
-    transfer_tcp_to_file(&PathBuf::from(file_name), &mut connection, file_size)
-        .await?;
+    transfer_tcp_to_file(
+        &PathBuf::from(file_name),
+        &mut connection,
+        file_size,
+        &key2,
+    )
+    .await?;
 
     Ok(())
 }

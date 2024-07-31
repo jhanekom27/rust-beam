@@ -12,11 +12,19 @@ pub trait UpdateProgress {
     fn update_progress(&mut self, bytes_read: u64);
 }
 
+// Enum for mode to be encrypt or decrypt
+pub enum Mode {
+    Encrypt,
+    Decrypt,
+}
+
 async fn transfer_bytes_from_source_to_sink(
     buffer: &mut [u8],
     source: &mut (dyn tokio::io::AsyncRead + Unpin),
     sink: &mut (dyn tokio::io::AsyncWrite + Unpin),
     progress_tracker: &mut dyn UpdateProgress,
+    key: &[u8],
+    mode: Mode,
 ) -> io::Result<()> {
     let mut bytes_read = 0;
 
@@ -38,6 +46,7 @@ async fn transfer_bytes_from_source_to_sink(
 pub async fn transfer_file_to_tcp(
     file_path: &std::path::PathBuf,
     connection: &mut tokio::net::TcpStream,
+    key: &[u8],
 ) -> io::Result<()> {
     let mut file = tokio::fs::File::open(file_path).await?;
     let mut buffer = [0; BUFFER_SIZE];
@@ -49,6 +58,8 @@ pub async fn transfer_file_to_tcp(
         &mut file,
         connection,
         &mut progress_tracker,
+        key,
+        Mode::Encrypt,
     )
     .await?;
 
@@ -60,6 +71,7 @@ pub async fn transfer_tcp_to_file(
     file_path: &std::path::PathBuf,
     connection: &mut tokio::net::TcpStream,
     file_size: u64,
+    key: &[u8],
 ) -> io::Result<()> {
     let mut file = tokio::fs::File::create(file_path).await?;
     let mut buffer = [0; BUFFER_SIZE];
@@ -70,6 +82,8 @@ pub async fn transfer_tcp_to_file(
         connection,
         &mut file,
         &mut progress_tracker,
+        key,
+        Mode::Decrypt,
     )
     .await?;
 

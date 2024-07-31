@@ -73,7 +73,7 @@ pub async fn send_file(
     let key1 = spake.finish(&inbound_spake_message.message).unwrap();
     println!("Key1: {:?}", key1);
 
-    transfer_file_to_tcp(file_path, &mut connection).await?;
+    transfer_file_to_tcp(file_path, &mut connection, &key1).await?;
 
     Ok(())
 }

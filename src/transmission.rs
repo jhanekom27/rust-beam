@@ -1,3 +1,4 @@
+use aes_gcm::aead::Payload;
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 use rand::{rngs::OsRng, RngCore};
 use std::io;
@@ -31,7 +32,6 @@ async fn transfer_bytes_from_source_to_sink(
     let mut bytes_read = 0;
 
     let encryption_key = Key::<Aes256Gcm>::from_slice(key);
-    let mut nonce_bytes = [0u8; 12];
     let cipher = Aes256Gcm::new(encryption_key);
 
     let mut pinned_source = Pin::new(source);
@@ -39,40 +39,60 @@ async fn transfer_bytes_from_source_to_sink(
 
     match mode {
         Mode::Encrypt => {
-            OsRng.fill_bytes(&mut nonce_bytes);
-            let nonce = Nonce::from_slice(&nonce_bytes);
-
-            // Write the nonce to the sink first, so it can be used for decryption later
-            pinned_sink.write_all(&nonce_bytes).await?;
+            println!("Encrypting");
+            let mut nonce_bytes = [0u8; 12];
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
                 if n == 0 {
+                    println!("Breaking");
                     break;
                 }
 
+                OsRng.fill_bytes(&mut nonce_bytes);
+                let nonce = Nonce::from_slice(&nonce_bytes);
+
+                // Encrypt the buffer
                 let encrypted_buffer =
                     cipher.encrypt(nonce, &buffer[..n]).unwrap();
-                pinned_sink.write_all(&encrypted_buffer).await?;
+
+                let mut combined_buffer =
+                    Vec::with_capacity(12 + encrypted_buffer.len());
+                combined_buffer.extend_from_slice(&nonce);
+                combined_buffer.extend_from_slice(&encrypted_buffer);
+
+                pinned_sink.write_all(&mut combined_buffer).await?;
 
                 bytes_read += n;
                 progress_tracker.update_progress(bytes_read as u64);
             }
         }
         Mode::Decrypt => {
-            // Read the nonce from the source first
-            pinned_source.read_exact(&mut nonce_bytes).await?;
-            let nonce = Nonce::from_slice(&nonce_bytes);
+            println!("Decrypting");
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
                 if n == 0 {
+                    println!("Breaking");
                     break;
                 }
 
-                let decrypted_buffer =
-                    cipher.decrypt(nonce, &buffer[..n]).unwrap();
-                pinned_sink.write_all(&decrypted_buffer).await?;
+                if n < 12 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Data too short",
+                    ));
+                }
 
-                bytes_read += n;
+                let encrytped_data_len = n - 12;
+                let (nonce_bytes, encrypted_data) = buffer.split_at(12);
+
+                let encrypted_data = &encrypted_data[..encrytped_data_len];
+
+                let nonce = Nonce::from_slice(nonce_bytes);
+                let decrypted_buffer =
+                    cipher.decrypt(&nonce, encrypted_data).unwrap();
+
+                pinned_sink.write_all(&decrypted_buffer).await?;
+                bytes_read += decrypted_buffer.len();
                 progress_tracker.update_progress(bytes_read as u64);
             }
         }
@@ -86,7 +106,9 @@ pub async fn transfer_file_to_tcp(
     connection: &mut tokio::net::TcpStream,
     key: &[u8],
 ) -> io::Result<()> {
+    println!("transfer_file_to_tcp");
     let mut file = tokio::fs::File::open(file_path).await?;
+    println!("File: {:?}", file);
     let mut buffer = [0; BUFFER_SIZE];
     let mut progress_tracker =
         ProgressBarTracker::new(file.metadata().await?.len());
@@ -111,6 +133,7 @@ pub async fn transfer_tcp_to_file(
     file_size: u64,
     key: &[u8],
 ) -> io::Result<()> {
+    println!("transfer_tcp_to_file");
     let mut file = tokio::fs::File::create(file_path).await?;
     let mut buffer = [0; BUFFER_SIZE];
     let mut progress_tracker = ProgressBarTracker::new(file_size);

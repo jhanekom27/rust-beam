@@ -1,9 +1,8 @@
-use std::{io, sync::Arc};
+use std::io;
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
-    sync::Mutex,
 };
 
 use crate::models::SendMetaData;

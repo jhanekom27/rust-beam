@@ -10,11 +10,12 @@ pub struct State {
 #[derive(Debug)]
 pub struct Session {
     pub sender_connection: Arc<Mutex<TcpStream>>,
-    pub receiver_info: ReceiverInfo,
+    pub receiver_info: SendMetaData,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ReceiverInfo {
+pub struct SendMetaData {
     pub file_name: String,
     pub file_size: u64,
+    pub sender_key: String,
 }

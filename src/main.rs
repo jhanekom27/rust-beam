@@ -1,3 +1,5 @@
+include!(concat!(env!("OUT_DIR"), "/password.rs"));
+
 mod cli;
 mod commands;
 mod comms;
@@ -23,6 +25,7 @@ use config::get_config;
 async fn main() -> io::Result<()> {
     let args = Cli::parse();
     println!("{:?}", args);
+    println!("The compiled password is: {}", PASSWORD);
 
     let config = get_config();
     let send_server_address =
@@ -30,6 +33,7 @@ async fn main() -> io::Result<()> {
     let receive_server_address =
         format!("{}:{}", config.server_url, config.receive_port);
 
+    // TODO: maybe move state to relay
     let state = Arc::new(State {
         sessions: Mutex::new(HashMap::new()),
     });

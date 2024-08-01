@@ -14,7 +14,6 @@ pub trait UpdateProgress {
     fn update_progress(&mut self, bytes_read: u64);
 }
 
-// Enum for mode to be encrypt or decrypt
 pub enum Mode {
     Encrypt,
     Decrypt,
@@ -28,7 +27,6 @@ async fn transfer_bytes_from_source_to_sink(
     key: &[u8],
     mode: Mode,
 ) -> io::Result<()> {
-    println!("buffer len: {}", buffer.len());
     let mut bytes_read = 0;
 
     let encryption_key = Key::<Aes256Gcm>::from_slice(key);
@@ -43,9 +41,7 @@ async fn transfer_bytes_from_source_to_sink(
             let mut nonce_bytes = [0u8; 12];
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
-                println!("n: {}", n);
                 if n == 0 {
-                    println!("Breaking");
                     break;
                 }
 
@@ -65,8 +61,6 @@ async fn transfer_bytes_from_source_to_sink(
                 combined_buffer.extend_from_slice(&encrypted_buffer_len);
                 combined_buffer.extend_from_slice(&nonce);
                 combined_buffer.extend_from_slice(&encrypted_buffer);
-                println!("combined_buffer len: {}", combined_buffer.len());
-                println!("combined_buffer: {:?}", combined_buffer);
 
                 pinned_sink.write_all(&mut combined_buffer).await?;
 
@@ -79,9 +73,7 @@ async fn transfer_bytes_from_source_to_sink(
             let mut temp_buffer = vec![];
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
-                println!("n: {}", n);
                 if n == 0 {
-                    println!("Breaking");
                     break;
                 }
 
@@ -118,25 +110,6 @@ async fn transfer_bytes_from_source_to_sink(
 
                     temp_buffer.drain(..total_length);
                 }
-
-                // println!("buffer: {:?}", buffer);
-
-                // let encrytped_data_len = n - 12;
-                // let (nonce_bytes, encrypted_data) = buffer.split_at(12);
-
-                // let encrypted_data = &encrypted_data[..encrytped_data_len];
-
-                // println!("encrypted_data len: {}", encrypted_data.len());
-                // println!("encrypted_data: {:?}", encrypted_data);
-
-                // let nonce = Nonce::from_slice(nonce_bytes);
-                // println!("nonce: {:?}", nonce);
-                // let decrypted_buffer =
-                //     cipher.decrypt(&nonce, encrypted_data).unwrap();
-
-                // pinned_sink.write_all(&decrypted_buffer).await?;
-                // bytes_read += decrypted_buffer.len();
-                // progress_tracker.update_progress(bytes_read as u64);
             }
         }
     }
@@ -149,11 +122,8 @@ pub async fn transfer_file_to_tcp(
     connection: &mut tokio::net::TcpStream,
     key: &[u8],
 ) -> io::Result<()> {
-    println!("transfer_file_to_tcp");
     let mut file = tokio::fs::File::open(file_path).await?;
-    println!("File: {:?}", file);
     let mut buffer = [0; BUFFER_SIZE];
-    println!("Buffer len: {}", buffer.len());
     let mut progress_tracker =
         ProgressBarTracker::new(file.metadata().await?.len());
 
@@ -177,10 +147,8 @@ pub async fn transfer_tcp_to_file(
     file_size: u64,
     key: &[u8],
 ) -> io::Result<()> {
-    println!("transfer_tcp_to_file");
     let mut file = tokio::fs::File::create(file_path).await?;
     let mut buffer = [0; BUFFER_SIZE];
-    println!("Buffer len: {}", buffer.len());
     let mut progress_tracker = ProgressBarTracker::new(file_size);
 
     transfer_bytes_from_source_to_sink(

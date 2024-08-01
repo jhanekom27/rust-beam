@@ -1,4 +1,3 @@
-use aes_gcm::aead::Payload;
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 use rand::{rngs::OsRng, RngCore};
 use std::io;
@@ -29,6 +28,7 @@ async fn transfer_bytes_from_source_to_sink(
     key: &[u8],
     mode: Mode,
 ) -> io::Result<()> {
+    println!("buffer len: {}", buffer.len());
     let mut bytes_read = 0;
 
     let encryption_key = Key::<Aes256Gcm>::from_slice(key);
@@ -43,6 +43,7 @@ async fn transfer_bytes_from_source_to_sink(
             let mut nonce_bytes = [0u8; 12];
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
+                println!("n: {}", n);
                 if n == 0 {
                     println!("Breaking");
                     break;
@@ -55,10 +56,17 @@ async fn transfer_bytes_from_source_to_sink(
                 let encrypted_buffer =
                     cipher.encrypt(nonce, &buffer[..n]).unwrap();
 
+                // Get the length of encrypted buffer and fit into 4 bytes
+                let encrypted_buffer_len =
+                    (encrypted_buffer.len() as u32).to_be_bytes();
+
                 let mut combined_buffer =
-                    Vec::with_capacity(12 + encrypted_buffer.len());
+                    Vec::with_capacity(4 + 12 + encrypted_buffer.len());
+                combined_buffer.extend_from_slice(&encrypted_buffer_len);
                 combined_buffer.extend_from_slice(&nonce);
                 combined_buffer.extend_from_slice(&encrypted_buffer);
+                println!("combined_buffer len: {}", combined_buffer.len());
+                println!("combined_buffer: {:?}", combined_buffer);
 
                 pinned_sink.write_all(&mut combined_buffer).await?;
 
@@ -68,32 +76,67 @@ async fn transfer_bytes_from_source_to_sink(
         }
         Mode::Decrypt => {
             println!("Decrypting");
+            let mut temp_buffer = vec![];
 
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
+                println!("n: {}", n);
                 if n == 0 {
                     println!("Breaking");
                     break;
                 }
 
-                if n < 12 {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "Data too short",
-                    ));
+                temp_buffer.extend_from_slice(&buffer[..n]);
+
+                while temp_buffer.len() >= 16 {
+                    if temp_buffer.len() < 16 {
+                        break;
+                    }
+
+                    // Get the data length hby slicing first 4 bytes
+                    let data_length: usize = temp_buffer[0..4]
+                        .try_into()
+                        .map(u32::from_be_bytes)
+                        .unwrap()
+                        .try_into()
+                        .unwrap();
+                    let total_length = 4 + 12 + data_length;
+
+                    if temp_buffer.len() < total_length {
+                        break;
+                    }
+
+                    let nonce_bytes = &temp_buffer[4..16];
+                    let encrypted_data = &temp_buffer[16..total_length];
+
+                    let nonce = Nonce::from_slice(nonce_bytes);
+                    let decrypted_data =
+                        cipher.decrypt(&nonce, encrypted_data).unwrap();
+
+                    pinned_sink.write_all(&decrypted_data).await?;
+                    bytes_read += decrypted_data.len();
+                    progress_tracker.update_progress(bytes_read as u64);
+
+                    temp_buffer.drain(..total_length);
                 }
 
-                let encrytped_data_len = n - 12;
-                let (nonce_bytes, encrypted_data) = buffer.split_at(12);
+                // println!("buffer: {:?}", buffer);
 
-                let encrypted_data = &encrypted_data[..encrytped_data_len];
+                // let encrytped_data_len = n - 12;
+                // let (nonce_bytes, encrypted_data) = buffer.split_at(12);
 
-                let nonce = Nonce::from_slice(nonce_bytes);
-                let decrypted_buffer =
-                    cipher.decrypt(&nonce, encrypted_data).unwrap();
+                // let encrypted_data = &encrypted_data[..encrytped_data_len];
 
-                pinned_sink.write_all(&decrypted_buffer).await?;
-                bytes_read += decrypted_buffer.len();
-                progress_tracker.update_progress(bytes_read as u64);
+                // println!("encrypted_data len: {}", encrypted_data.len());
+                // println!("encrypted_data: {:?}", encrypted_data);
+
+                // let nonce = Nonce::from_slice(nonce_bytes);
+                // println!("nonce: {:?}", nonce);
+                // let decrypted_buffer =
+                //     cipher.decrypt(&nonce, encrypted_data).unwrap();
+
+                // pinned_sink.write_all(&decrypted_buffer).await?;
+                // bytes_read += decrypted_buffer.len();
+                // progress_tracker.update_progress(bytes_read as u64);
             }
         }
     }
@@ -110,6 +153,7 @@ pub async fn transfer_file_to_tcp(
     let mut file = tokio::fs::File::open(file_path).await?;
     println!("File: {:?}", file);
     let mut buffer = [0; BUFFER_SIZE];
+    println!("Buffer len: {}", buffer.len());
     let mut progress_tracker =
         ProgressBarTracker::new(file.metadata().await?.len());
 
@@ -136,6 +180,7 @@ pub async fn transfer_tcp_to_file(
     println!("transfer_tcp_to_file");
     let mut file = tokio::fs::File::create(file_path).await?;
     let mut buffer = [0; BUFFER_SIZE];
+    println!("Buffer len: {}", buffer.len());
     let mut progress_tracker = ProgressBarTracker::new(file_size);
 
     transfer_bytes_from_source_to_sink(

@@ -36,6 +36,8 @@ jobs:
 
       - name: Build release
         run: cargo build --release
+        env:
+          SECRET_PASSWORD: ${{ secrets.SECRET_PASSWORD }}
 
       - name: Package for homebrew
         if: matrix.config.os != 'windows-latest'
@@ -149,6 +151,8 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t ${{ env.BINARY_NAME }}:latest .
+        env:
+          SECRET_PASSWORD: ${{ secrets.SECRET_PASSWORD }}
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2

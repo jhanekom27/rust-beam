@@ -6,6 +6,9 @@ ARG TARGETPLATFORM=linux/amd64
 # Use the official Rust image as the build environment
 FROM --platform=$BUILDPLATFORM rust:latest AS builder
 
+# TODO: Find a better way to do this
+ARG SECRET_PASSWORD=${SECRET_PASSWORD}
+
 # Install necessary dependencies for building Rust projects
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -17,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the Cargo.toml and Cargo.lock files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
 
 # Copy the source code
 COPY src ./src

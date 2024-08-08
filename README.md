@@ -10,9 +10,9 @@ The file is never stored so there is no need to worry about how or where the dat
 
 ## Workflow
 
-1. Sender uses `rust-beam` to send the file they want. `rb` will provide a UUID for the transfer
-2. Sender passes the UUID to the receiver in any convenient way (e.g. slack or discord).
-3. Receiver retrieves the file via the UUID using `rb`
+1. Sender uses `rust-beam` to send the file they want. `rb` will provide a `unique id` for the transfer
+2. Sender passes the `unique id` to the receiver in any convenient way (e.g. slack or discord).
+3. Receiver retrieves the file via the `unique id` using `rb`
 4. The relay server facilitates streaming the data across allowing small and larger files to be sent easily without taxing the server.
 
 ## Installation
@@ -34,20 +34,20 @@ brew install rust-beam
 
 ### Send a file
 
-`rust-beam send -f <example-file>`
+`rust-beam send <example-file>`
 
-Wait for UUID and send to receiver
+Wait for `unique id` and send to receiver
 
 ### Receive a file
 
-`rust-beam receive <UUID>`
+`rust-beam receive <unique id>`
 
 Wait for file transfer to finish
 
 ## TODO List
 
 - [ ] Allow file compression before sending to reduce transfer size
-- [ ] Allow file encryption before sending
+- [x] Allow file encryption before sending
 - [x] Use a shorter UUID
 - [x] Copy UUID to clipboard
 - [ ] Improve info presentation during usage

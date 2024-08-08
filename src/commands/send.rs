@@ -54,7 +54,6 @@ pub async fn send_file(
         &Identity::new(b"sender"),
         &Identity::new(b"receiver"),
     );
-    println!("outbound_msg: {:?}", outbound_msg);
 
     // send the outbound message
     send_outbound(
@@ -67,11 +66,9 @@ pub async fn send_file(
 
     // receive the inbound message
     let inbound_spake_message = get_inbound(&mut connection).await?;
-    println!("Inbound message: {:?}", inbound_spake_message);
 
     // create the key
     let key1 = spake.finish(&inbound_spake_message.message).unwrap();
-    println!("Key1: {:?}", key1);
 
     transfer_file_to_tcp(file_path, &mut connection, &key1).await?;
 

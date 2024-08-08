@@ -12,6 +12,6 @@ pub fn get_config() -> Config {
     let config_yaml = include_str!("config.yaml");
     let config: Config =
         serde_yaml::from_str(config_yaml).expect("Failed to parse Config YAML");
-    println!("Configuration loaded: {:?}", config);
+    //println!("Configuration loaded: {:?}", config);
     config
 }

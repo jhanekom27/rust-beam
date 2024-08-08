@@ -24,7 +24,6 @@ pub async fn receive_file(
         file_size,
         sender_key: _,
     } = get_meta_data(&mut connection).await?;
-    println!("got my meta");
 
     // do the key exchange thingo
     let (spake, outbound_msg) = Spake2::<Ed25519Group>::start_b(
@@ -32,7 +31,6 @@ pub async fn receive_file(
         &Identity::new(b"sender"),
         &Identity::new(b"receiver"),
     );
-    println!("outbound_msg: {:?}", outbound_msg);
 
     // send the outbound message
     send_outbound(
@@ -45,11 +43,9 @@ pub async fn receive_file(
 
     // receive the inbound message
     let inbound_spake_message = get_inbound(&mut connection).await?;
-    println!("Inbound message: {:?}", inbound_spake_message);
 
     // create the key
     let key2 = spake.finish(&inbound_spake_message.message).unwrap();
-    println!("Key2: {:?}", key2);
 
     transfer_tcp_to_file(
         &PathBuf::from(file_name),

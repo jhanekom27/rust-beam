@@ -66,10 +66,8 @@ async fn handle_receiver(
 
     // TODO: do the key exchange for encryption
     let sender_message = get_inbound(&mut sender_conn_guard).await?;
-    println!("Sender message: {:?}", sender_message);
 
     let receiver_message = get_inbound(&mut receiver_conn).await?;
-    println!("Receiver message: {:?}", receiver_message);
 
     send_outbound(&mut sender_conn_guard, &receiver_message).await?;
     send_outbound(&mut receiver_conn, &sender_message).await?;

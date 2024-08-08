@@ -24,8 +24,6 @@ use config::get_config;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let args = Cli::parse();
-    println!("{:?}", args);
-    println!("The compiled password is: {}", PASSWORD);
 
     let config = get_config();
     let send_server_address =

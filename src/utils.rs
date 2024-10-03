@@ -1,11 +1,15 @@
 use copypasta::{ClipboardContext, ClipboardProvider};
-use std::io;
-use std::io::Error;
-use std::io::Write;
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::{color, style};
+use crossterm::{
+    cursor::MoveToNextLine,
+    event::{self, Event, KeyCode},
+    execute,
+    style::{
+        Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor,
+    },
+    terminal::{disable_raw_mode, enable_raw_mode},
+};
+use std::io::{self, Error};
+
 use tokio::{io::AsyncReadExt, net::TcpStream};
 
 pub fn get_random_name() -> String {
@@ -30,33 +34,40 @@ pub async fn get_key_from_conn(conn: &mut TcpStream) -> Result<String, Error> {
 }
 
 pub fn copy_key_to_clipbpard(file_key: String) {
-    let mut stdout = io::stdout().into_raw_mode().unwrap();
-    let stdin = io::stdin();
+    let mut stdout = io::stdout();
 
-    writeln!(
+    // Enable raw mode
+    enable_raw_mode().unwrap();
+
+    // Output formatted text to the terminal
+    execute!(
         stdout,
-        "{}<space>{} copy key to clipboard: {}{}{}{}\r",
-        style::Bold,
-        style::Reset,
-        color::Fg(color::Green),
-        style::Bold,
-        file_key,
-        style::Reset
+        Print("copy key to clipboard: "),
+        SetAttribute(Attribute::Bold),
+        SetForegroundColor(Color::Green),
+        Print(file_key.clone()),
+        ResetColor,
+        SetAttribute(Attribute::Reset),
+        MoveToNextLine(1)
     )
     .unwrap();
 
-    for c in stdin.keys() {
-        match c.unwrap() {
-            Key::Char(' ') => {
-                let mut ctx: ClipboardContext =
-                    ClipboardContext::new().unwrap();
-                ctx.set_contents(file_key.clone()).unwrap();
-                break;
+    // Listen for key presses
+    loop {
+        // Wait for an event (blocking)
+        if let Event::Key(key_event) = event::read().unwrap() {
+            match key_event.code {
+                KeyCode::Char(' ') => {
+                    let mut ctx: ClipboardContext =
+                        ClipboardContext::new().unwrap();
+                    ctx.set_contents(file_key.clone()).unwrap();
+                    break;
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
-    // return stdout to normal
-    let _ = stdout.suspend_raw_mode();
+    // Return stdout to normal mode (disable raw mode)
+    disable_raw_mode().unwrap();
 }

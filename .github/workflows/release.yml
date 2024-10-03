@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - feat/windows-compatible
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+    # tags:
+    #   - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write

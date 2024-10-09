@@ -41,8 +41,12 @@ async fn main() -> io::Result<()> {
             send_file(&send_args.file_path, &send_server_address).await?;
         }
         Commands::Receive(receive_args) => {
-            receive_file(&receive_args.sender_key, &receive_server_address)
-                .await?;
+            receive_file(
+                &receive_args.sender_key,
+                &receive_server_address,
+                &receive_args.output_path,
+            )
+            .await?;
         }
         Commands::Relay => {
             relay(state.clone()).await?;

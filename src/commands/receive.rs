@@ -10,9 +10,11 @@ use crate::{
     transmission::transfer_tcp_to_file,
 };
 
+//TODO: maybe refactor to pass whole receiver args struct
 pub async fn receive_file(
     sender_key: &String,
     server_address: &str,
+    output_path: &Option<PathBuf>,
 ) -> io::Result<()> {
     println!("Receiving file with key: {}", sender_key);
     let mut connection = TcpStream::connect(server_address).await?;
@@ -20,7 +22,7 @@ pub async fn receive_file(
     connection.write_all(sender_key.as_bytes()).await?;
 
     let SendMetaData {
-        file_name,
+        file_name, // TODO: also change to PathBuf
         file_size,
         sender_key: _,
     } = get_meta_data(&mut connection).await?;
@@ -47,13 +49,13 @@ pub async fn receive_file(
     // create the key
     let key2 = spake.finish(&inbound_spake_message.message).unwrap();
 
-    transfer_tcp_to_file(
-        &PathBuf::from(file_name),
-        &mut connection,
-        file_size,
-        &key2,
-    )
-    .await?;
+    // Unwrap the output path if provided otherwise use filename
+    let save_path = match output_path {
+        Some(path) => &path,
+        _ => &PathBuf::from(file_name),
+    };
+
+    transfer_tcp_to_file(save_path, &mut connection, file_size, &key2).await?;
 
     Ok(())
 }

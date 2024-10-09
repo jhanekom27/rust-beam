@@ -22,4 +22,6 @@ pub struct SendArgs {
 #[derive(Debug, Args)]
 pub struct ReceiveArgs {
     pub sender_key: String,
+    #[arg(short, long)]
+    pub output_path: Option<PathBuf>,
 }

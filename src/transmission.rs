@@ -7,8 +7,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::ui::ProgressBarTracker;
 
-// constant buffer size
-const BUFFER_SIZE: usize = 1024;
+// BIGGEST PERFORMANCE WIN: Increased buffer size from 1KB to 64KB
+// This reduces system calls, network packets, and encryption operations by 64x
+const BUFFER_SIZE: usize = 64 * 1024;
 
 pub trait UpdateProgress {
     fn update_progress(&mut self, bytes_read: u64);
@@ -39,7 +40,7 @@ async fn transfer_bytes_from_source_to_sink(
         Mode::Encrypt => {
             println!("Encrypting");
             let mut nonce_bytes = [0u8; 12];
-
+            
             while let Ok(n) = pinned_source.as_mut().read(&mut buffer).await {
                 if n == 0 {
                     break;
@@ -49,20 +50,17 @@ async fn transfer_bytes_from_source_to_sink(
                 let nonce = Nonce::from_slice(&nonce_bytes);
 
                 // Encrypt the buffer
-                let encrypted_buffer =
-                    cipher.encrypt(nonce, &buffer[..n]).unwrap();
+                let encrypted_buffer = cipher.encrypt(nonce, &buffer[..n]).unwrap();
 
                 // Get the length of encrypted buffer and fit into 4 bytes
-                let encrypted_buffer_len =
-                    (encrypted_buffer.len() as u32).to_be_bytes();
+                let encrypted_buffer_len = (encrypted_buffer.len() as u32).to_be_bytes();
 
-                let mut combined_buffer =
-                    Vec::with_capacity(4 + 12 + encrypted_buffer.len());
+                let mut combined_buffer = Vec::with_capacity(4 + 12 + encrypted_buffer.len());
                 combined_buffer.extend_from_slice(&encrypted_buffer_len);
-                combined_buffer.extend_from_slice(&nonce);
+                combined_buffer.extend_from_slice(&nonce_bytes);
                 combined_buffer.extend_from_slice(&encrypted_buffer);
 
-                pinned_sink.write_all(&mut combined_buffer).await?;
+                pinned_sink.write_all(&combined_buffer).await?;
 
                 bytes_read += n;
                 progress_tracker.update_progress(bytes_read as u64);
@@ -84,7 +82,7 @@ async fn transfer_bytes_from_source_to_sink(
                         break;
                     }
 
-                    // Get the data length hby slicing first 4 bytes
+                    // Get the data length by slicing first 4 bytes
                     let data_length: usize = temp_buffer[0..4]
                         .try_into()
                         .map(u32::from_be_bytes)
@@ -101,8 +99,7 @@ async fn transfer_bytes_from_source_to_sink(
                     let encrypted_data = &temp_buffer[16..total_length];
 
                     let nonce = Nonce::from_slice(nonce_bytes);
-                    let decrypted_data =
-                        cipher.decrypt(&nonce, encrypted_data).unwrap();
+                    let decrypted_data = cipher.decrypt(&nonce, encrypted_data).unwrap();
 
                     pinned_sink.write_all(&decrypted_data).await?;
                     bytes_read += decrypted_data.len();

@@ -75,8 +75,15 @@ async fn handle_receiver(
     let sender_conn_clone = session.sender_connection.clone();
 
     tokio::spawn(async move {
-        let mut buffer = [0; 1024];
+        // Use much larger buffer for relay forwarding - major network performance win!
+        let mut buffer = [0; 64 * 1024]; // 64KB instead of 1KB
         let mut sender_conn_guard = sender_conn_clone.lock().await; // Lock the connection here
+        
+        // Optimize TCP sockets for relay performance
+        if let Ok(sender_ref) = sender_conn_guard.as_ref() {
+            let _ = sender_ref.set_nodelay(true);
+        }
+        let _ = receiver_conn.set_nodelay(true);
 
         loop {
             let n = match sender_conn_guard.read(&mut buffer).await {
